@@ -1,0 +1,190 @@
+/* ============================================
+   RADCONNECT - RTL Overrides for Arabic
+   Only directional changes, everything else in main.css
+   ============================================ */
+
+[dir="rtl"] {
+    text-align: right;
+    /* In rtl.css - Make all text slightly smaller */
+    font-size: 0.95em; /* 5% smaller than LTR */
+}
+
+
+[dir="rtl"] body:not(.translated)::before {
+    content: 'جاري التحميل ...';
+}
+
+/* Layout */
+[dir="rtl"] .page-header {
+    flex-direction: row-reverse;
+}
+
+
+
+/* Forms */
+[dir="rtl"] .form-group label {
+    text-align: right;
+}
+
+[dir="rtl"] .form-group input,
+[dir="rtl"] .form-group select,
+[dir="rtl"] .form-group textarea {
+    text-align: right;
+}
+
+/* Checkbox Grid */
+[dir="rtl"] .checkbox-grid label {
+    flex-direction: row-reverse;
+}
+
+/* Tables */
+[dir="rtl"] table th,
+[dir="rtl"] table td {
+    text-align: right;
+}
+
+/* Modal */
+[dir="rtl"] .modal-header {
+    flex-direction: row-reverse;
+}
+
+/* Toast */
+[dir="rtl"] .toast {
+    right: auto;
+    left: 1rem;
+    border-left: none;
+    border-right: 4px solid var(--primary);
+}
+
+[dir="rtl"] .toast-success {
+    border-right-color: var(--success);
+}
+
+[dir="rtl"] .toast-error {
+    border-right-color: var(--danger);
+}
+
+[dir="rtl"] .toast-warning {
+    border-right-color: var(--warning);
+}
+
+/* Utilities */
+[dir="rtl"] .text-right {
+    text-align: left;
+}
+
+/* Case Cards */
+[dir="rtl"] .case-card-header {
+    flex-direction: row-reverse;
+}
+
+/* Flex helpers */
+[dir="rtl"] .flex-between {
+    flex-direction: row-reverse;
+}
+
+/* Buttons with icons */
+[dir="rtl"] .btn svg,
+[dir="rtl"] .btn img {
+    margin-right: 0;
+    margin-left: 0.5rem;
+}
+
+/* File item */
+[dir="rtl"] .file-item {
+    flex-direction: row-reverse;
+}
+
+/* Transaction item */
+[dir="rtl"] .transaction-item {
+    flex-direction: row-reverse;
+}
+
+/* Balance card */
+[dir="rtl"] .balance-card {
+    text-align: right;
+}
+
+/* Stats card */
+[dir="rtl"] .stat-card {
+    text-align: right;
+}
+
+/* ========== RESPONSIVE FIXES FOR RTL ========== */
+
+/* Small screens - Make RTL look exactly like LTR but mirrored */
+@media (max-width: 768px) {
+    /* Navbar - Keep same structure as LTR */
+    [dir="rtl"] .navbar {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 0.75rem 1rem;
+        flex-direction: row; /* Keep row, not row-reverse */
+    }
+    
+    /* Nav links - Same order as LTR (3) */
+    [dir="rtl"] .nav-links {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        padding-top: 0.5rem;
+        justify-content: flex-start;
+    }
+    
+    /* Nav actions - Same as LTR */
+    [dir="rtl"] .nav-actions {
+        gap: 0.5rem;
+    }
+    
+    /* Page header - Keep column on small screens like LTR */
+    [dir="rtl"] .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    /* Page header h1 - Match LTR */
+    [dir="rtl"] .page-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    /* Grids - Match LTR (1 column) */
+    [dir="rtl"] .grid-2,
+    [dir="rtl"] .grid-3,
+    [dir="rtl"] .grid-4 {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Modal - Match LTR */
+    [dir="rtl"] .modal-content {
+        margin: 0.5rem;
+        padding: 1.5rem;
+    }
+    
+    /* Case details - Match LTR */
+    [dir="rtl"] .case-details {
+        grid-template-columns: 1fr;
+        text-align: right;
+    }
+    
+    /* Auth card - Match LTR */
+    [dir="rtl"] .auth-card {
+        padding: 1.5rem;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+    [dir="rtl"] .container {
+        padding: 1rem;
+    }
+    
+    /* Buttons - Keep full width like LTR */
+    [dir="rtl"] .btn {
+        width: 100%;
+    }
+    
+    /* Checkbox grid - Match LTR */
+    [dir="rtl"] .checkbox-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
