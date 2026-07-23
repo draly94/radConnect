@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <title ar="رادكونكت - مراجعة حالة">RadConnect - Review Case</title>
+            <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/rtl.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand" ar="رادكونكت">RadConnect</div>
+        <div class="nav-links">
+            <a href="../dashboard.html" ar="الرئيسية">Main</a>
+            <a href="index.html" ar="الإدارة">Admin</a>
+            <a href="users.html" ar="المستخدمين">Users</a>
+            <a href="settings.html" ar="الإعدادات">Settings</a>
+        </div>
+        <div class="nav-actions">
+            <button onclick="toggleTheme()">🌓</button>
+            <button onclick="toggleLang()">AR</button>
+            <button onclick="logout()" ar="تسجيل الخروج">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <div>
+                <a href="index.html" class="text-sm text-muted" ar="← العودة للوحة الإدارة">← Back to Admin</a>
+                <h1 id="pageTitle" ar="مراجعة حالة">Review Case</h1>
+            </div>
+        </div>
+
+        <div id="caseContent">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+
+        <!-- Review Form -->
+        <div id="reviewForm" class="card mt-2" style="display: none;">
+            <h3 id="formTitle" ar="إجراء المراجعة">Review Action</h3>
+            
+            <!-- Clean Notes -->
+            <div class="form-group" id="cleanNotesGroup">
+                <label for="cleanNotes" ar="تنظيف الملاحظات">Clean Notes (remove foul language/PHI)</label>
+                <textarea id="cleanNotes" rows="4"></textarea>
+            </div>
+
+            <!-- Price -->
+            <div class="form-group" id="priceGroup">
+                <label for="priceSelect" ar="تحديد السعر">Set Price</label>
+                <select id="priceSelect" onchange="handlePriceSelect()">
+                    <option value="" ar="اختر من القائمة">Select from price list</option>
+                </select>
+                <input type="number" id="customPrice" placeholder="Custom price" step="0.01" class="mt-1" style="display: none;">
+            </div>
+
+            <!-- Deadline -->
+            <div class="form-group" id="deadlineGroup">
+                <label for="deadline" ar="الموعد النهائي">Deadline</label>
+                <input type="datetime-local" id="deadline">
+            </div>
+
+            <!-- Assign Radiologist -->
+            <div class="form-group" id="assignGroup">
+                <label for="radiologistSelect" ar="تعيين طبيب أشعة">Assign Radiologist</label>
+                <select id="radiologistSelect">
+                    <option value="" ar="نظامي (مطابقة تلقائية)">System-wide (auto matching)</option>
+                </select>
+            </div>
+
+            <!-- Resolution Notes (for disputes) -->
+            <div class="form-group" id="resolutionGroup" style="display: none;">
+                <label for="resolutionNotes" ar="ملاحظات الحل">Resolution Notes</label>
+                <textarea id="resolutionNotes" rows="3"></textarea>
+            </div>
+
+            <!-- Rejection Reason -->
+            <div class="form-group" id="rejectReasonGroup" style="display: none;">
+                <label for="rejectReason" ar="سبب الرفض">Rejection Reason</label>
+                <textarea id="rejectReason" rows="3" required></textarea>
+            </div>
+
+            <div id="reviewError" class="error-message"></div>
+
+            <div class="flex gap-1 mt-2 flex-wrap" id="actionButtons">
+                <button class="btn btn-success" id="btnAccept" onclick="submitReview('accept')" ar="قبول">Accept</button>
+                <button class="btn btn-danger" id="btnReject" onclick="submitReview('reject')" ar="رفض">Reject</button>
+                <button class="btn btn-warning" id="btnRevise" onclick="submitReview('revise')" ar="طلب مراجعة">Request Revision</button>
+                <button class="btn btn-primary" id="btnReassign" onclick="submitReview('reassign')" ar="إعادة تعيين">Reassign</button>
+                <button class="btn btn-outline" id="btnResolveSP" onclick="submitReview('resolveSP')" ar="حل كمشكلة مزود">Resolve as SP Issue</button>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/api.js"></script>
+    <script>
+        let currentCase = null;
+        let reviewAction = 'accept';
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+            
+            if (!isAdmin()) {
+                window.location.href = '../dashboard.html';
+                return;
+            }
+            
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+              
+            const params = new URLSearchParams(window.location.search);
+            const caseId = params.get('id');
+            
+            if (!caseId) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            await loadCase(caseId);
+        });
+        
+        async function loadCase(caseId) {
+            currentCase = await getCaseById(caseId);
+            if (!currentCase) return;
+            
+            // Display case info
+            document.getElementById('caseContent').innerHTML = `
+                <div class="card">
+                    <h3>Case #${currentCase.case_number} - ${formatStatus(currentCase.status)}</h3>
+                    <div class="grid-2 mt-1">
+                        <div>
+                            <p><strong>Modality:</strong> ${currentCase.modality?.join(', ')}</p>
+                            <p><strong>Body System:</strong> ${currentCase.body_system?.join(', ')}</p>
+                            <p><strong>Urgency:</strong> ${currentCase.urgency}</p>
+                            <p><strong>Provider:</strong> ${currentCase.provider_id}</p>
+                            <p><strong>Radiologist:</strong> ${currentCase.assigned_radiologist_id || 'Unassigned'}</p>
+                            <p><strong>Created:</strong> ${formatDate(currentCase.created_at)}</p>
+                            ${currentCase.deadline ? `<p><strong>Deadline:</strong> ${formatDate(currentCase.deadline)}</p>` : ''}
+                            ${currentCase.price ? `<p><strong>Price:</strong> ${formatCurrency(currentCase.price)}</p>` : ''}
+                        </div>
+                        <div>
+                            <p><strong>Original Provider Notes:</strong></p>
+                            <p>${currentCase.provider_notes || 'None'}</p>
+                            ${currentCase.radiologist_notes ? `
+                                <p class="mt-1"><strong>Radiologist Notes:</strong></p>
+                                <p>${currentCase.radiologist_notes}</p>
+                            ` : ''}
+                            ${currentCase.rejection_reason ? `
+                                <p class="mt-1" style="color: var(--danger);"><strong>Rejection Reason:</strong></p>
+                                <p>${currentCase.rejection_reason}</p>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Load form data
+            await loadPriceList();
+            await loadRadiologists();
+            
+            // Pre-fill notes for cleaning
+            const notesToClean = currentCase.status === 'pending_admin_review' 
+                ? currentCase.provider_notes 
+                : currentCase.radiologist_notes;
+            
+            if (notesToClean) {
+                document.getElementById('cleanNotes').value = notesToClean;
+            }
+            
+            // Show relevant form sections based on status
+            setupFormForStatus(currentCase.status);
+            
+            document.getElementById('reviewForm').style.display = 'block';
+            translatePage();
+        }
+        
+        function setupFormForStatus(status) {
+            const cleanGroup = document.getElementById('cleanNotesGroup');
+            const priceGroup = document.getElementById('priceGroup');
+            const deadlineGroup = document.getElementById('deadlineGroup');
+            const assignGroup = document.getElementById('assignGroup');
+            const resolutionGroup = document.getElementById('resolutionGroup');
+            const rejectGroup = document.getElementById('rejectReasonGroup');
+            
+            const btnAccept = document.getElementById('btnAccept');
+            const btnReject = document.getElementById('btnReject');
+            const btnRevise = document.getElementById('btnRevise');
+            const btnReassign = document.getElementById('btnReassign');
+            const btnResolveSP = document.getElementById('btnResolveSP');
+            
+            // Hide all first
+            [cleanGroup, priceGroup, deadlineGroup, assignGroup, resolutionGroup, rejectGroup].forEach(g => g.style.display = 'none');
+            [btnAccept, btnReject, btnRevise, btnReassign, btnResolveSP].forEach(b => b.style.display = 'none');
+                // Always show price and deadline fields for editing
+    priceGroup.style.display = 'block';
+    deadlineGroup.style.display = 'block';
+    
+    // Pre-fill current values
+    if (currentCase.price) {
+        document.getElementById('priceSelect').value = '';
+        document.getElementById('customPrice').value = currentCase.price;
+        document.getElementById('customPrice').style.display = 'block';
+    }
+    
+    if (currentCase.deadline) {
+        const deadline = new Date(currentCase.deadline);
+        document.getElementById('deadline').value = deadline.toISOString().slice(0, 16);
+    }
+            if (status === 'pending_admin_review') {
+                // Initial review
+                cleanGroup.style.display = 'block';
+                priceGroup.style.display = 'block';
+                deadlineGroup.style.display = 'block';
+                assignGroup.style.display = 'block';
+                btnAccept.style.display = 'inline-flex';
+                btnReject.style.display = 'inline-flex';
+                rejectGroup.style.display = 'block';
+            } else if (status === 'pending_admin_review_rad_work') {
+                // Reviewing radiologist work
+                cleanGroup.style.display = 'block';
+                priceGroup.style.display = 'block';
+                btnAccept.style.display = 'inline-flex';
+                btnRevise.style.display = 'inline-flex';
+                rejectGroup.style.display = 'block';
+} else if (status === 'disputed') {
+    // Dispute resolution
+    cleanGroup.style.display = 'block';
+    document.getElementById('cleanNotes').value = currentCase.rejection_reason || '';
+    // Change label for clean notes
+    document.querySelector('#cleanNotesGroup label').textContent = 'Modify Dispute Reason (clean if needed)';
+    
+    assignGroup.style.display = 'block';
+    resolutionGroup.style.display = 'block';
+    btnReassign.style.display = 'inline-flex';
+    btnResolveSP.style.display = 'inline-flex';
+}
+        }
+        
+        async function loadPriceList() {
+            const pricing = await getPricing();
+            const select = document.getElementById('priceSelect');
+            
+            pricing.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.base_price;
+                option.textContent = `${p.description} - ${formatCurrency(p.base_price)} (${p.estimated_eta_hours}h)`;
+                option.dataset.eta = p.estimated_eta_hours;
+                select.appendChild(option);
+            });
+            
+            const customOption = document.createElement('option');
+            customOption.value = 'custom';
+            customOption.textContent = 'Custom Price';
+            select.appendChild(customOption);
+        }
+        
+        async function loadRadiologists() {
+            const users = await getUsers();
+            const radiologists = users.filter(u => u.role === 'radiologist' && u.is_active);
+            const select = document.getElementById('radiologistSelect');
+            
+            // Exclude failed radiologists
+            const excluded = currentCase.excluded_radiologists || [];
+            
+            radiologists.forEach(r => {
+                if (!excluded.includes(r.id)) {
+                    const option = document.createElement('option');
+                    option.value = r.id;
+                    option.textContent = `${r.full_name} (${r.email})`;
+                    select.appendChild(option);
+                }
+            });
+        }
+        
+        function handlePriceSelect() {
+            const select = document.getElementById('priceSelect');
+            const customInput = document.getElementById('customPrice');
+            const deadlineInput = document.getElementById('deadline');
+            
+            if (select.value === 'custom') {
+                customInput.style.display = 'block';
+            } else {
+                customInput.style.display = 'none';
+                // Auto-set deadline from ETA
+                const selectedOption = select.options[select.selectedIndex];
+                const eta = selectedOption.dataset.eta;
+                if (eta) {
+                    const deadline = new Date();
+                    deadline.setHours(deadline.getHours() + parseInt(eta));
+                    deadlineInput.value = deadline.toISOString().slice(0, 16);
+                }
+            }
+        }
+        
+        async function submitReview(action) {
+            const errorDiv = document.getElementById('reviewError');
+            errorDiv.classList.remove('show');
+            
+            const updates = {};
+            const cleanNotes = document.getElementById('cleanNotes').value;
+            const price = document.getElementById('priceSelect').value === 'custom' 
+                ? document.getElementById('customPrice').value 
+                : document.getElementById('priceSelect').value;
+            const deadline = document.getElementById('deadline').value;
+            const radiologistId = document.getElementById('radiologistSelect').value;
+            const rejectReason = document.getElementById('rejectReason').value;
+            const resolutionNotes = document.getElementById('resolutionNotes').value;
+            // At the beginning of submitReview, always check for price/deadline changes
+
+if (price) updates.price = parseFloat(price);
+if (deadline) updates.deadline = new Date(deadline).toISOString();
+            if (currentCase.status === 'pending_admin_review') {
+                if (action === 'accept') {
+                    updates.status = radiologistId ? 'assigned' : 'awaiting_radiologist';
+                    updates.admin_cleaned_provider_notes = cleanNotes || currentCase.provider_notes;
+                    updates.price = parseFloat(price) || null;
+                    updates.deadline = deadline || null;
+                    updates.assigned_radiologist_id = radiologistId || null;
+                } else if (action === 'reject') {
+                    if (!rejectReason) {
+                        errorDiv.textContent = 'Please provide a rejection reason';
+                        errorDiv.classList.add('show');
+                        return;
+                    }
+                    updates.status = 'rejected_by_admin';
+                    updates.rejection_reason = rejectReason;
+                }
+} else if (currentCase.status === 'pending_admin_review_rad_work') {
+    if (action === 'accept') {
+        updates.status = 'completed';  // Changed from 'pending_sp_review'
+        updates.completed_at = new Date().toISOString();  // Set completion time
+        updates.admin_cleaned_radiologist_notes = cleanNotes || currentCase.radiologist_notes;
+        if (price) updates.price = parseFloat(price);
+    } else if (action === 'revise') {
+        if (!rejectReason) {
+            errorDiv.textContent = 'Please provide a revision reason';
+            errorDiv.classList.add('show');
+            return;
+        }
+        updates.status = 'revision_requested';
+        updates.rejection_reason = rejectReason;
+    }
+
+} else if (currentCase.status === 'disputed') {
+    if (action === 'reassign') {
+        const cleanedReason = document.getElementById('cleanNotes').value;
+        
+        updates.rejection_reason = cleanedReason || currentCase.rejection_reason;
+        
+        if (radiologistId) {
+            // Specific reassignment
+            updates.status = 'assigned';
+            updates.assigned_radiologist_id = radiologistId;
+            updates.excluded_radiologists = [...(currentCase.excluded_radiologists || []), currentCase.assigned_radiologist_id].filter(id => id);
+            updates.admin_notes = resolutionNotes;
+        } else {
+            // System-wide matching
+            updates.status = 'awaiting_radiologist';
+            updates.assigned_radiologist_id = null;
+            updates.excluded_radiologists = [...(currentCase.excluded_radiologists || []), currentCase.assigned_radiologist_id].filter(id => id);
+            updates.admin_notes = resolutionNotes;
+        }
+    } else if (action === 'resolveSP') {
+        const cleanedReason = document.getElementById('cleanNotes').value;
+        
+        updates.status = 'resolved_closed';
+        updates.completed_at = new Date().toISOString();
+        updates.admin_notes = resolutionNotes;
+        updates.rejection_reason = cleanedReason || currentCase.rejection_reason;
+    }
+}
+            
+            
+            try {
+                await updateCase(currentCase.id, updates);
+                showToast('Review submitted successfully!', 'success');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+            } catch (error) {
+                errorDiv.textContent = error.message || 'Error submitting review';
+                errorDiv.classList.add('show');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <title ar="رادكونكت - إدارة المستخدمين">RadConnect - Users</title>
+            <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/rtl.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand" ar="رادكونكت">RadConnect</div>
+        <div class="nav-links">
+            <a href="../dashboard.html" ar="الرئيسية">Main</a>
+            <a href="index.html" ar="الإدارة">Admin</a>
+            <a href="users.html" class="active" ar="المستخدمين">Users</a>
+            <a href="settings.html" ar="الإعدادات">Settings</a>
+        </div>
+        <div class="nav-actions">
+            <button onclick="toggleTheme()">🌓</button>
+            <button onclick="toggleLang()">AR</button>
+            <button onclick="logout()" ar="تسجيل الخروج">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h1 ar="المستخدمين">Users</h1>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex gap-1 mb-2">
+            <select id="roleFilter" class="form-group" style="margin: 0; width: auto;" onchange="filterUsers()">
+                <option value="all" ar="جميع الأدوار">All Roles</option>
+                <option value="service_provider" ar="مزود خدمة">Service Provider</option>
+                <option value="radiologist" ar="طبيب أشعة">Radiologist</option>
+                <option value="admin" ar="مدير">Admin</option>
+            </select>
+            <select id="statusFilter" class="form-group" style="margin: 0; width: auto;" onchange="filterUsers()">
+                <option value="all" ar="جميع الحالات">All Status</option>
+                <option value="active" ar="نشط">Active</option>
+                <option value="inactive" ar="غير نشط">Inactive</option>
+            </select>
+        </div>
+
+        <!-- Users Table -->
+        <div class="card">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th ar="الاسم">Name</th>
+                            <th ar="البريد الإلكتروني">Email</th>
+                            <th ar="الدور">Role</th>
+                            <th ar="الحالة">Status</th>
+                            <th ar="تاريخ التسجيل">Joined</th>
+                            <th ar="إجراءات">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <tr>
+                            <td colspan="6">
+                                <div class="loading">
+                                    <div class="spinner"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 ar="تسجيل معاملة">Record Transaction</h3>
+                <button class="modal-close" onclick="hideModal('paymentModal')">&times;</button>
+            </div>
+            <form id="paymentForm">
+                <input type="hidden" id="payUserId">
+                <input type="hidden" id="payUserRole">
+                
+                <div class="form-group">
+                    <label for="payCaseId" ar="رقم الحالة (اختياري)">Case Number (optional)</label>
+                    <input type="text" id="payCaseId" ar-placeholder="مثال: 1001">
+                </div>
+                
+                <div class="form-group">
+                    <label for="payAmount" ar="المبلغ (دولار)">Amount (USD)</label>
+                    <input type="number" id="payAmount" required step="0.01" min="0.01">
+                </div>
+                
+                <div class="form-group">
+                    <label for="payNotes" ar="ملاحظات">Notes</label>
+                    <input type="text" id="payNotes" ar-placeholder="رقم المرجع أو طريقة الدفع">
+                </div>
+                
+                <div class="flex gap-1 mt-2">
+                    <button type="submit" class="btn btn-primary" ar="تسجيل">Record</button>
+                    <button type="button" class="btn btn-outline" onclick="hideModal('paymentModal')" ar="إلغاء">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/api.js"></script>
+    <script>
+        let allUsers = [];
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+            
+            if (!isAdmin()) {
+                window.location.href = '../dashboard.html';
+                return;
+            }
+            
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+              
+            await loadUsers();
+            
+            // Payment form
+            document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const userId = document.getElementById('payUserId').value;
+                const userRole = document.getElementById('payUserRole').value;
+                const caseNumber = document.getElementById('payCaseId').value;
+                const amount = parseFloat(document.getElementById('payAmount').value);
+                const notes = document.getElementById('payNotes').value;
+                
+                let caseId = null;
+                if (caseNumber) {
+                    const sb = await getSB();
+                    const { data } = await sb.from('cases')
+                        .select('id')
+                        .eq('case_number', parseInt(caseNumber))
+                        .single();
+                    caseId = data?.id;
+                }
+                
+                const type = userRole === 'service_provider' ? 'payment_from_sp' : 'payment_to_radiologist';
+                const fromId = userRole === 'service_provider' ? userId : currentUser.id;
+                const toId = userRole === 'service_provider' ? currentUser.id : userId;
+                
+                try {
+                    await recordPayment(caseId, fromId, toId, amount, type, notes);
+                    hideModal('paymentModal');
+                    showToast('Transaction recorded!', 'success');
+                } catch (error) {
+                    showToast('Error recording transaction', 'error');
+                }
+            });
+        });
+        
+        async function loadUsers() {
+            allUsers = await getUsers();
+            filterUsers();
+        }
+        
+        function filterUsers() {
+            const roleFilter = document.getElementById('roleFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            let filtered = allUsers;
+            
+            if (roleFilter !== 'all') {
+                filtered = filtered.filter(u => u.role === roleFilter);
+            }
+            if (statusFilter === 'active') {
+                filtered = filtered.filter(u => u.is_active);
+            } else if (statusFilter === 'inactive') {
+                filtered = filtered.filter(u => !u.is_active);
+            }
+            
+            renderUsers(filtered);
+        }
+        
+        function renderUsers(users) {
+            const tbody = document.getElementById('usersTableBody');
+            
+            if (users.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <p ar="لا يوجد مستخدمين">No users found</p>
+                            </div>
+                        </td>
+                    </tr>`;
+                translatePage();
+                return;
+            }
+            
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>${u.full_name}</td>
+                    <td>${u.email}</td>
+                    <td>
+                        <span class="badge badge-${u.role === 'admin' ? 'rejected' : u.role === 'radiologist' ? 'progress' : 'pending'}">
+                            ${u.role}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge ${u.is_active ? 'badge-completed' : 'badge-rejected'}">
+                            ${u.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td>${formatDate(u.created_at)}</td>
+                    <td>
+                        <div class="flex gap-1">
+                            <button class="btn btn-sm btn-outline" onclick="toggleUserStatus('${u.id}', ${!u.is_active})" 
+                                ar="${u.is_active ? 'تعطيل' : 'تفعيل'}">
+                                ${u.is_active ? 'Disable' : 'Enable'}
+                            </button>
+                            <button class="btn btn-sm btn-primary" onclick="openPaymentModal('${u.id}', '${u.role}')" 
+                                ar="دفع">
+                                Pay
+                            </button>
+            
+            <button class="btn btn-sm btn-primary" onclick="window.location.href='user-transactions.html?id=${u.id}'" ar="معاملات">
+    Transactions
+</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            translatePage();
+        }
+        
+        async function toggleUserStatus(userId, makeActive) {
+            await updateUser(userId, { is_active: makeActive });
+            showToast(`User ${makeActive ? 'enabled' : 'disabled'}`, 'success');
+            await loadUsers();
+        }
+        
+        function openPaymentModal(userId, role) {
+            document.getElementById('payUserId').value = userId;
+            document.getElementById('payUserRole').value = role;
+            showModal('paymentModal');
+        }
+    </script>
+</body>
+</html>

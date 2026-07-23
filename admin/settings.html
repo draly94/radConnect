@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <title ar="رادكونكت - الإعدادات">RadConnect - Settings</title>
+            <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/rtl.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand" ar="رادكونكت">RadConnect</div>
+        <div class="nav-links">
+            <a href="../dashboard.html" ar="الرئيسية">Main</a>
+            <a href="index.html" ar="الإدارة">Admin</a>
+            <a href="users.html" ar="المستخدمين">Users</a>
+            <a href="settings.html" class="active" ar="الإعدادات">Settings</a>
+        </div>
+        <div class="nav-actions">
+            <button onclick="toggleTheme()">🌓</button>
+            <button onclick="toggleLang()">AR</button>
+            <button onclick="logout()" ar="تسجيل الخروج">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container" style="max-width: 700px;">
+        <div class="page-header">
+            <h1 ar="الإعدادات">System Settings</h1>
+        </div>
+
+        <!-- File Retention -->
+        <div class="card mb-2">
+            <div class="card-header">
+                <h2 class="card-title" ar="الاحتفاظ بالملفات">File Retention</h2>
+            </div>
+            <div class="form-group">
+                <label for="retentionDays" ar="مدة الاحتفاظ (أيام)">Retention Period (Days)</label>
+                <input type="number" id="retentionDays" min="1" >
+                <small ar="بعد اكتمال الحالة، يتم حذف الملفات تلقائياً">Files are automatically deleted this many days after case completion</small>
+            </div>
+            <button class="btn btn-primary" onclick="saveRetention()" ar="حفظ">Save</button>
+        </div>
+<!-- Manual Cleanup -->
+<div class="card mb-2">
+    <div class="card-header">
+        <h2 class="card-title" ar="تنظيف الملفات منتهية الصلاحية">Cleanup Expired Files</h2>
+    </div>
+    <p class="text-sm text-muted mb-2" ar="حذف الملفات التي تجاوزت مدة الاحتفاظ">Delete files that have exceeded the retention period</p>
+    <div id="cleanupInfo" class="text-sm mb-2"></div>
+    <button class="btn btn-danger" onclick="showCleanupModal()" ar="تشغيل التنظيف">Run Cleanup</button>
+</div>
+
+<!-- Cleanup Confirmation Modal -->
+<div id="cleanupModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 ar="تأكيد التنظيف">Confirm Cleanup</h3>
+            <button class="modal-close" onclick="hideModal('cleanupModal')">&times;</button>
+        </div>
+        <div class="form-group">
+            <p ar="هذا الإجراء لا يمكن التراجع عنه. سيتم حذف جميع الملفات منتهية الصلاحية نهائياً." style="color: var(--danger); margin-bottom: 1rem;">
+                This action cannot be undone. All expired files will be permanently deleted.
+            </p>
+            <p id="expiredCount" class="mb-2"></p>
+        </div>
+        <div class="form-group">
+            <label for="captchaInput" ar="أدخل رمز التأكيد">Enter confirmation code</label>
+            <div class="flex gap-1 mb-1" style="align-items: center;">
+                <span id="captchaCode" style="font-family: monospace; font-size: 1.5rem; font-weight: 700; background: var(--bg); padding: 0.5rem 1rem; border-radius: var(--radius); letter-spacing: 3px; user-select: none;">----</span>
+                <button type="button" class="btn btn-sm btn-outline" onclick="generateCaptcha()" ar="تحديث">↻</button>
+            </div>
+            <input type="text" id="captchaInput" maxlength="4" placeholder="Enter the code above" autocomplete="off">
+            <div id="captchaError" class="error-message"></div>
+        </div>
+        <div class="flex gap-1 mt-2">
+            <button class="btn btn-danger" onclick="confirmCleanup()" id="confirmCleanupBtn" ar="تأكيد الحذف">Confirm Delete</button>
+            <button class="btn btn-outline" onclick="hideModal('cleanupModal')" ar="إلغاء">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- Cleanup Progress Modal -->
+<div id="cleanupProgressModal" class="modal">
+    <div class="modal-content" style="text-align: center;">
+        <h3 ar="جاري التنظيف...">Cleaning up...</h3>
+        <div class="spinner" style="margin: 2rem auto;"></div>
+        <p id="cleanupStatus" ar="جاري حذف الملفات منتهية الصلاحية...">Deleting expired files...</p>
+        <div id="cleanupResult" class="mt-2"></div>
+    </div>
+</div>
+        <!-- Allowed File Types -->
+        <div class="card mb-2">
+            <div class="card-header">
+                <h2 class="card-title" ar="أنواع الملفات المسموحة">Allowed File Types</h2>
+            </div>
+            <div class="form-group">
+                <label for="fileTypes" ar="الامتدادات المسموحة (مفصولة بفواصل)">Allowed Extensions (comma separated)</label>
+                <input type="text" id="fileTypes" >
+                <small ar="مثال: dcm, jpg, png, pdf, zip">Example: dcm, jpg, png, pdf, zip</small>
+            </div>
+            <button class="btn btn-primary" onclick="saveFileTypes()" ar="حفظ">Save</button>
+        </div>
+
+        <!-- Max File Size -->
+        <div class="card mb-2">
+            <div class="card-header">
+                <h2 class="card-title" ar="حجم الملف الأقصى">Maximum File Size</h2>
+            </div>
+            <div class="form-group">
+                <label for="maxFileSize" ar="الحجم الأقصى (ميجابايت، 0 = غير محدود)">Max Size (MB, 0 = unlimited)</label>
+                <input type="number" id="maxFileSize" min="0" >
+                <small ar="اترك 0 للملفات غير المحدودة">Set to 0 for unlimited file size</small>
+            </div>
+            <button class="btn btn-primary" onclick="saveMaxFileSize()" ar="حفظ">Save</button>
+        </div>
+
+        <!-- Max Files Per Upload -->
+        <div class="card mb-2">
+            <div class="card-header">
+                <h2 class="card-title" ar="الحد الأقصى للملفات في الرفع الواحد">Max Files Per Upload</h2>
+            </div>
+            <div class="form-group">
+                <label for="maxFiles" ar="العدد الأقصى للملفات">Maximum Number of Files</label>
+                <input type="number" id="maxFiles" min="1" >
+            </div>
+            <button class="btn btn-primary" onclick="saveMaxFiles()" ar="حفظ">Save</button>
+        </div>
+
+        <!-- Default Deadline -->
+        <div class="card mb-2">
+            <div class="card-header">
+                <h2 class="card-title" ar="الموعد النهائي الافتراضي">Default Deadline</h2>
+            </div>
+            <div class="form-group">
+                <label for="defaultDeadline" ar="الساعات الافتراضية">Default Hours</label>
+                <input type="number" id="defaultDeadline" min="1" >
+                <small ar="يستخدم عند عدم تحديد موعد نهائي محدد">Used when no specific deadline is set from pricing</small>
+            </div>
+            <button class="btn btn-primary" onclick="saveDefaultDeadline()" ar="حفظ">Save</button>
+        </div>
+
+        <!-- Deadline Warning -->
+        <div class="card mb-2">
+            <div class="card-header">
+                <h2 class="card-title" ar="تحذير الموعد النهائي">Deadline Warning</h2>
+            </div>
+            <div class="form-group">
+                <label for="deadlineWarning" ar="نسبة التحذير (%)">Warning Percentage (%)</label>
+                <input type="number" id="deadlineWarning" min="1" max="99" >
+                <small ar="يتم إرسال إشعار عند تجاوز هذه النسبة من الوقت">Notification sent when this percentage of time has elapsed</small>
+            </div>
+            <button class="btn btn-primary" onclick="saveDeadlineWarning()" ar="حفظ">Save</button>
+        </div>
+
+        <div id="saveMsg" class="error-message"></div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+            
+            if (!isAdmin()) {
+                window.location.href = '../dashboard.html';
+                return;
+            }
+            
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+              
+            await loadSettings();
+        });
+        
+        async function loadSettings() {
+            const settings = await getSettings();
+            
+            settings.forEach(s => {
+                switch(s.key) {
+                    case 'file_retention_days':
+                        document.getElementById('retentionDays').value = s.value.days || 30;
+                        break;
+                    case 'allowed_file_types':
+                        document.getElementById('fileTypes').value = s.value.types?.join(', ') || '';
+                        break;
+                    case 'max_file_size_mb':
+                        document.getElementById('maxFileSize').value = s.value.size || 0;
+                        break;
+                    case 'max_files_per_upload':
+                        document.getElementById('maxFiles').value = s.value.count || 50;
+                        break;
+                    case 'default_deadline_hours':
+                        document.getElementById('defaultDeadline').value = s.value.hours || 48;
+                        break;
+                    case 'notification_settings':
+                        document.getElementById('deadlineWarning').value = s.value.deadline_warning_percentage || 75;
+                        break;
+                }
+            });
+        }
+        
+        async function saveSetting(key, value, successMsg) {
+            try {
+                await updateSetting(key, value);
+                showToast(successMsg || 'Saved!', 'success');
+            } catch (error) {
+                showToast('Error saving', 'error');
+            }
+        }
+        
+        function saveRetention() {
+            const days = parseInt(document.getElementById('retentionDays').value);
+            saveSetting('file_retention_days', { days }, 'Retention period saved');
+        }
+        
+        function saveFileTypes() {
+            const types = document.getElementById('fileTypes').value
+                .split(',')
+                .map(t => t.trim().toLowerCase())
+                .filter(t => t);
+            saveSetting('allowed_file_types', { types }, 'File types saved');
+        }
+        
+        function saveMaxFileSize() {
+            const size = parseInt(document.getElementById('maxFileSize').value);
+            saveSetting('max_file_size_mb', { size }, 'Max file size saved');
+        }
+        
+        function saveMaxFiles() {
+            const count = parseInt(document.getElementById('maxFiles').value);
+            saveSetting('max_files_per_upload', { count }, 'Max files saved');
+        }
+        
+        function saveDefaultDeadline() {
+            const hours = parseInt(document.getElementById('defaultDeadline').value);
+            saveSetting('default_deadline_hours', { hours }, 'Default deadline saved');
+        }
+        
+        function saveDeadlineWarning() {
+            const percentage = parseInt(document.getElementById('deadlineWarning').value);
+            saveSetting('notification_settings', { 
+                deadline_warning_percentage: percentage,
+                overdue_check_interval_hours: 1
+            }, 'Warning settings saved');
+        }
+    
+    let currentCaptcha = '';
+
+// Load expired count on page load
+async function loadExpiredCount() {
+    try {
+        const sb = await initSupabase();
+        const { data } = await sb.rpc('get_expired_file_cases');
+        const count = data ? data.length : 0;
+        
+        const info = document.getElementById('cleanupInfo');
+        if (count > 0) {
+            info.innerHTML = `<span style="color: var(--warning);">${count} case(s) have expired files ready for cleanup</span>`;
+        } else {
+            info.innerHTML = '<span style="color: var(--success);">No expired files to clean</span>';
+        }
+    } catch (error) {
+        console.error('Failed to check expired files:', error);
+    }
+}
+
+function generateCaptcha() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    currentCaptcha = code;
+    document.getElementById('captchaCode').textContent = code;
+    document.getElementById('captchaInput').value = '';
+    document.getElementById('captchaError').classList.remove('show');
+}
+
+async function showCleanupModal() {
+    // Load expired count
+    try {
+        const sb = await initSupabase();
+        const { data } = await sb.rpc('get_expired_file_cases');
+        const count = data ? data.length : 0;
+        
+        if (count === 0) {
+            showToast('No expired files to clean', 'success');
+            return;
+        }
+        
+        document.getElementById('expiredCount').innerHTML = `
+            <strong style="color: var(--danger);">${count} case(s)</strong> with expired files will be deleted.
+        `;
+        
+        generateCaptcha();
+        showModal('cleanupModal');
+        
+    } catch (error) {
+        showToast('Error checking expired files', 'error');
+    }
+}
+
+async function confirmCleanup() {
+    const captchaError = document.getElementById('captchaError');
+    const userInput = document.getElementById('captchaInput').value.toUpperCase();
+    
+    if (userInput !== currentCaptcha) {
+        captchaError.textContent = 'Incorrect code. Please try again.';
+        captchaError.classList.add('show');
+        generateCaptcha();
+        return;
+    }
+    
+    captchaError.classList.remove('show');
+    hideModal('cleanupModal');
+    
+    // Show progress
+    showModal('cleanupProgressModal');
+    document.getElementById('cleanupStatus').textContent = 'Deleting expired files...';
+    document.getElementById('cleanupResult').innerHTML = '';
+    
+    try {
+        const count = await cleanupExpiredFiles();
+        
+        document.getElementById('cleanupStatus').textContent = 'Cleanup complete!';
+        document.getElementById('cleanupResult').innerHTML = `
+            <div class="badge badge-completed" style="font-size: 1rem; padding: 0.75rem;">
+                Successfully cleaned ${count} case(s)
+            </div>
+            <button class="btn btn-primary mt-2" onclick="hideModal('cleanupProgressModal'); location.reload();" ar="موافق">OK</button>
+        `;
+        
+    } catch (error) {
+        document.getElementById('cleanupStatus').textContent = 'Cleanup failed';
+        document.getElementById('cleanupResult').innerHTML = `
+            <div class="badge badge-rejected" style="font-size: 1rem; padding: 0.75rem;">
+                Error: ${error.message}
+            </div>
+            <button class="btn btn-outline mt-2" onclick="hideModal('cleanupProgressModal');" ar="إغلاق">Close</button>
+        `;
+    }
+}
+
+// Add to the existing DOMContentLoaded
+// After loadSettings(), add:
+loadExpiredCount();
+    
+    </script>
+</body>
+</html>

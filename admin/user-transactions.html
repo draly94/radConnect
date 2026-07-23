@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <title ar="رادكونكت - معاملات المستخدم">RadConnect - User Transactions</title>
+            <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/rtl.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand" ar="رادكونكت">RadConnect</div>
+        <div class="nav-links">
+            <a href="../dashboard.html" ar="الرئيسية">Main</a>
+            <a href="index.html" ar="الإدارة">Admin</a>
+            <a href="users.html" ar="المستخدمين">Users</a>
+            <a href="settings.html" ar="الإعدادات">Settings</a>
+        </div>
+        <div class="nav-actions">
+            <button onclick="toggleTheme()">🌓</button>
+            <button onclick="toggleLang()">AR</button>
+            <button onclick="logout()" ar="تسجيل الخروج">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <div>
+                <a href="users.html" class="text-sm text-muted" ar="← العودة للمستخدمين">← Back to Users</a>
+                <h1 id="userName" ar="معاملات المستخدم">User Transactions</h1>
+            </div>
+            <div class="flex gap-1">
+                <button class="btn btn-outline btn-sm" onclick="generateInvoice()" ar="إنشاء فاتورة">Generate Invoice</button>
+                <button class="btn btn-primary btn-sm" onclick="showPaymentModal()" ar="تسجيل دفعة">Record Payment</button>
+            </div>
+        </div>
+
+        <!-- User Info -->
+        <div class="card mb-2">
+            <div class="flex-between">
+                <div>
+                    <strong id="userFullName">-</strong>
+                    <span class="text-sm text-muted" id="userRole">-</span>
+                </div>
+                <div>
+                    <span class="badge" id="balanceBadge">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex gap-1 mb-2">
+            <select id="statusFilter" class="form-group" style="margin: 0; width: auto;" onchange="loadCases()">
+                <option value="unsettled" selected ar="غير مسددة">Unsettled</option>
+                <option value="all" ar="جميع الحالات">All Cases</option>
+                <option value="settled" ar="مسددة">Settled</option>
+            </select>
+        </div>
+
+        <!-- Cases Table -->
+        <div class="card">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                            <th ar="رقم الحالة">Case #</th>
+                            <th ar="السعر">Price</th>
+                            <th ar="المدفوع">Paid</th>
+                            <th ar="المتبقي">Remaining</th>
+                            <th ar="الحالة">Status</th>
+                            <th ar="التاريخ">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="casesTableBody">
+                        <tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex-between mt-2">
+                <div id="selectedInfo" class="text-sm text-muted"></div>
+                <div id="totalAmount" class="font-bold"></div>
+            </div>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="card mt-2">
+            <div class="card-header">
+                <h2 class="card-title" ar="سجل المدفوعات">Payment History</h2>
+            </div>
+            <div id="paymentHistory">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 ar="تسجيل دفعة">Record Payment</h3>
+                <button class="modal-close" onclick="hideModal('paymentModal')">&times;</button>
+            </div>
+            <form id="paymentForm">
+                <div id="selectedCasesList" class="mb-2"></div>
+                <div class="form-group">
+                    <label for="paymentAmount" ar="المبلغ المدفوع">Amount Paid</label>
+                    <input type="number" id="paymentAmount" required step="0.01" min="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="paymentNotes" ar="ملاحظات">Notes</label>
+                    <input type="text" id="paymentNotes" ar-placeholder="رقم المرجع أو طريقة الدفع">
+                </div>
+                <div class="flex gap-1 mt-2">
+                    <button type="submit" class="btn btn-primary" ar="تسجيل">Record Payment</button>
+                    <button type="button" class="btn btn-outline" onclick="hideModal('paymentModal')" ar="إلغاء">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/theme.js"></script>
+    <script src="../js/api.js"></script>
+<script>
+    let targetUser = null;
+    let allCases = [];
+    let selectedCases = new Set();
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+        const user = await checkAuth();
+        if (!user) return;
+        if (!isAdmin()) { window.location.href = '../dashboard.html'; return; }
+        
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+          
+        const params = new URLSearchParams(window.location.search);
+        const userId = params.get('id');
+        if (!userId) { window.location.href = 'users.html'; return; }
+        
+        await loadUserData(userId);
+        await loadCases();
+        await loadPaymentHistory();
+        
+        document.getElementById('paymentForm').addEventListener('submit', handlePayment);
+    });
+    
+    async function loadUserData(userId) {
+        const users = await getUsers();
+        targetUser = users.find(u => u.id === userId);
+        if (!targetUser) return;
+        
+        document.getElementById('userName').textContent = targetUser.full_name;
+        document.getElementById('userFullName').textContent = targetUser.full_name;
+        document.getElementById('userRole').textContent = targetUser.role;
+        
+        const balance = await getUserWalletBalance(userId);
+        const badge = document.getElementById('balanceBadge');
+        badge.textContent = formatCurrency(Math.abs(balance.net_balance));
+        
+        if (targetUser.role === 'service_provider') {
+            badge.className = `badge ${balance.net_balance < 0 ? 'badge-rejected' : 'badge-completed'}`;
+        } else {
+            badge.className = `badge ${balance.net_balance > 0 ? 'badge-pending' : 'badge-completed'}`;
+        }
+    }
+    
+    async function loadCases() {
+        const statusFilter = document.getElementById('statusFilter').value;
+        allCases = await getUserCases(targetUser.id, targetUser.role, statusFilter);
+        renderCases();
+    }
+    
+    function renderCases() {
+        const statusFilter = document.getElementById('statusFilter').value;
+        const tbody = document.getElementById('casesTableBody');
+        
+        let filtered = allCases;
+        if (statusFilter === 'unsettled') {
+            filtered = allCases.filter(c => {
+                const paid = getCasePaidAmount(c);
+                return paid < (c.price || 0);
+            });
+        } else if (statusFilter === 'settled') {
+            filtered = allCases.filter(c => {
+                const paid = getCasePaidAmount(c);
+                return paid >= (c.price || 0);
+            });
+        }
+        
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><p ar="لا توجد حالات">No cases found</p></div></td></tr>`;
+            updateTotals();
+            translatePage();
+            return;
+        }
+        
+        tbody.innerHTML = filtered.map(c => {
+            const paid = getCasePaidAmount(c);
+            const remaining = (c.price || 0) - paid;
+            const isSettled = remaining <= 0;
+            
+            return `
+                <tr>
+                    <td>
+                        <input type="checkbox" 
+                            value="${c.id}" 
+                            ${isSettled ? 'disabled' : ''}
+                            ${selectedCases.has(c.id) ? 'checked' : ''}
+                            onchange="toggleCase('${c.id}', this.checked)">
+                    </td>
+                    <td>Case #${c.case_number}</td>
+                    <td>${formatCurrency(c.price)}</td>
+                    <td>${formatCurrency(paid)}</td>
+                    <td style="color: ${remaining > 0 ? 'var(--danger)' : 'var(--success)'}">
+                        ${formatCurrency(Math.abs(remaining))}
+                    </td>
+                    <td>
+                        <span class="badge ${isSettled ? 'badge-completed' : 'badge-pending'}">
+                            ${isSettled ? 'Settled' : 'Unsettled'}
+                        </span>
+                    </td>
+                    <td>${formatDate(c.completed_at)}</td>
+                </tr>
+            `;
+        }).join('');
+        
+        updateTotals();
+        translatePage();
+    }
+    
+    function toggleCase(caseId, checked) {
+        if (checked) {
+            selectedCases.add(caseId);
+        } else {
+            selectedCases.delete(caseId);
+        }
+        updateTotals();
+    }
+    
+    function toggleSelectAll() {
+        const checkAll = document.getElementById('selectAll').checked;
+        const checkboxes = document.querySelectorAll('#casesTableBody input[type="checkbox"]:not([disabled])');
+        
+        checkboxes.forEach(cb => {
+            cb.checked = checkAll;
+            if (checkAll) {
+                selectedCases.add(cb.value);
+            } else {
+                selectedCases.delete(cb.value);
+            }
+        });
+        updateTotals();
+    }
+    
+    function updateTotals() {
+        const selected = allCases.filter(c => selectedCases.has(c.id));
+        const total = selected.reduce((sum, c) => sum + (c.price || 0), 0);
+        const paid = selected.reduce((sum, c) => sum + getCasePaidAmount(c), 0);
+        
+        document.getElementById('selectedInfo').textContent = 
+            `${selectedCases.size} case(s) selected`;
+        document.getElementById('totalAmount').textContent = 
+            `Total: ${formatCurrency(total)} | Paid: ${formatCurrency(paid)} | Due: ${formatCurrency(total - paid)}`;
+    }
+    
+    function generateInvoice() {
+    const selected = allCases.filter(c => selectedCases.has(c.id));
+    if (selected.length === 0) {
+        showToast('Select at least one case', 'warning');
+        return;
+    }
+    
+    const total = selected.reduce((sum, c) => sum + (c.price || 0), 0);
+    const paid = selected.reduce((sum, c) => sum + getCasePaidAmount(c), 0);
+    const due = total - paid;
+    const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}`;
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+    const invoice = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice ${invoiceNumber}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            padding: 40px 60px; 
+            color: #1a1a1a;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #2563eb;
+        }
+        .brand {
+            font-size: 28px;
+            font-weight: 800;
+            color: #2563eb;
+            letter-spacing: -1px;
+        }
+        .brand-sub {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 4px;
+        }
+        .invoice-title {
+            text-align: right;
+        }
+        .invoice-title h2 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e293b;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .invoice-number {
+            font-size: 14px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+        .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .info-box {
+            flex: 1;
+        }
+        .info-box h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        .info-box p {
+            font-size: 14px;
+            color: #334155;
+            line-height: 1.6;
+        }
+        .info-box.right {
+            text-align: right;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+        }
+        thead {
+            background: #f8fafc;
+        }
+        thead th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        tbody td {
+            padding: 14px 16px;
+            font-size: 13px;
+            color: #334155;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+        .case-detail {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+        .amount {
+            text-align: right;
+            font-weight: 500;
+        }
+        .totals-section {
+            margin-top: 20px;
+            margin-left: auto;
+            width: 300px;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+            color: #475569;
+        }
+        .total-row.grand {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            border-top: 2px solid #e2e8f0;
+            padding-top: 12px;
+            margin-top: 8px;
+        }
+        .total-row.due {
+            font-size: 20px;
+            font-weight: 800;
+            color: #2563eb;
+        }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+        .payment-info {
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #475569;
+            line-height: 1.8;
+        }
+        .payment-info strong {
+            color: #1e293b;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-unpaid { background: #fef3c7; color: #92400e; }
+        .status-paid { background: #d1fae5; color: #065f46; }
+        .status-partial { background: #dbeafe; color: #1e40af; }
+        @media print {
+            body { padding: 20px; }
+            @page { margin: 0.5cm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <div class="brand">RadConnect</div>
+            <div class="brand-sub">Medical Imaging Platform</div>
+        </div>
+        <div class="invoice-title">
+            <h2>Invoice</h2>
+            <div class="invoice-number">${invoiceNumber}</div>
+        </div>
+    </div>
+
+    <div class="info-section">
+        <div class="info-box">
+            <h3>From</h3>
+            <p>
+                <strong>RadConnect</strong><br>
+                123 Medical Center Drive<br>
+                Suite 100, Healthcare City<br>
+                Phone: +1 (555) 123-4567<br>
+                Email: billing@radconnect.com
+            </p>
+        </div>
+        <div class="info-box right">
+            <h3>${targetUser.role === 'service_provider' ? 'Bill To' : 'Pay To'}</h3>
+            <p>
+                <strong>${targetUser.full_name}</strong><br>
+                ${targetUser.organization || 'Individual Account'}<br>
+                ${targetUser.email}<br>
+                ${targetUser.phone || ''}
+            </p>
+        </div>
+    </div>
+
+    <div class="info-section">
+        <div class="info-box">
+            <h3>Invoice Date</h3>
+            <p>${today}</p>
+        </div>
+        <div class="info-box">
+            <h3>Reference</h3>
+            <p>${targetUser.role === 'service_provider' ? 'Radiology Reading Services' : 'Professional Services'}</p>
+        </div>
+        <div class="info-box right">
+            <h3>Status</h3>
+            <p>
+                <span class="status-badge ${due === 0 ? 'status-paid' : paid > 0 ? 'status-partial' : 'status-unpaid'}">
+                    ${due === 0 ? 'Settled' : paid > 0 ? 'Partially Paid' : 'Unpaid'}
+                </span>
+            </p>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Case #</th>
+                <th>Details</th>
+                <th>Completed</th>
+                <th class="amount">Price</th>
+                <th class="amount">Paid</th>
+                <th class="amount">Balance</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${selected.map(c => {
+                const casePaid = getCasePaidAmount(c);
+                const caseDue = (c.price || 0) - casePaid;
+                return `
+                <tr>
+                    <td><strong>#${c.case_number}</strong></td>
+                    <td>
+                        ${c.modality?.join(', ') || 'N/A'}
+                        <div class="case-detail">${c.body_system?.join(', ') || ''} | ${c.urgency || 'Routine'}</div>
+                    </td>
+                    <td>${formatDate(c.completed_at)}</td>
+                    <td class="amount">${formatCurrency(c.price)}</td>
+                    <td class="amount">${formatCurrency(casePaid)}</td>
+                    <td class="amount" style="color: ${caseDue > 0 ? '#ef4444' : '#10b981'}; font-weight: 600;">
+                        ${formatCurrency(caseDue)}
+                    </td>
+                </tr>
+                `;
+            }).join('')}
+        </tbody>
+    </table>
+
+    <div class="totals-section">
+        <div class="total-row">
+            <span>Subtotal</span>
+            <span>${formatCurrency(total)}</span>
+        </div>
+        <div class="total-row">
+            <span>Total Paid</span>
+            <span style="color: #10b981;">-${formatCurrency(paid)}</span>
+        </div>
+        <div class="total-row grand">
+            <span>Amount Due</span>
+            <span style="color: ${due > 0 ? '#2563eb' : '#10b981'};">${formatCurrency(due)}</span>
+        </div>
+    </div>
+
+    <div class="payment-info">
+        <strong>Payment Instructions:</strong><br>
+        Please transfer the total amount due to the following account:<br>
+        <strong>Bank:</strong> National Medical Bank<br>
+        <strong>Account Name:</strong> RadConnect Medical Imaging LLC<br>
+        <strong>Account Number:</strong> 1234-5678-9012-3456<br>
+        <strong>IBAN:</strong> US12 3456 7890 1234 5678<br>
+        <strong>Reference:</strong> ${invoiceNumber}<br><br>
+        <em>Payment is due within 15 days of invoice date. Please include the invoice reference number with your payment.</em>
+    </div>
+
+    <div class="footer">
+        <span>RadConnect Medical Imaging Platform &copy; ${new Date().getFullYear()}</span>
+        <span>Invoice ${invoiceNumber} | Page 1/1</span>
+    </div>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank');
+    win.document.write(invoice);
+    win.document.close();
+    
+    // Small delay to ensure content renders before print dialog
+    setTimeout(() => win.print(), 500);
+}
+    
+    function showPaymentModal() {
+        const selected = allCases.filter(c => selectedCases.has(c.id));
+        if (selected.length === 0) {
+            showToast('Select at least one case', 'warning');
+            return;
+        }
+        
+        const total = selected.reduce((sum, c) => sum + (c.price || 0), 0);
+        const paid = selected.reduce((sum, c) => sum + getCasePaidAmount(c), 0);
+        const due = total - paid;
+        
+        document.getElementById('selectedCasesList').innerHTML = `
+            <p><strong>${selected.length} case(s)</strong></p>
+            <p>Total: ${formatCurrency(total)} | Paid: ${formatCurrency(paid)}</p>
+            <p>Amount Due: <strong>${formatCurrency(due)}</strong></p>
+        `;
+        
+        document.getElementById('paymentAmount').value = due;
+        document.getElementById('paymentAmount').max = due;
+        
+        showModal('paymentModal');
+    }
+    
+    async function handlePayment(e) {
+        e.preventDefault();
+        
+        const amount = parseFloat(document.getElementById('paymentAmount').value);
+        const notes = document.getElementById('paymentNotes').value;
+        const selected = allCases.filter(c => selectedCases.has(c.id));
+        
+        if (amount <= 0) {
+            showToast('Enter valid amount', 'error');
+            return;
+        }
+        
+        selected.sort((a, b) => new Date(a.completed_at) - new Date(b.completed_at));
+        
+        let remaining = amount;
+        
+        for (const caseItem of selected) {
+            if (remaining <= 0) break;
+            
+            const casePaid = getCasePaidAmount(caseItem);
+            const caseDue = (caseItem.price || 0) - casePaid;
+            const payAmount = Math.min(remaining, caseDue);
+            
+            if (payAmount > 0) {
+                const type = targetUser.role === 'service_provider' ? 'payment_from_sp' : 'payment_to_radiologist';
+                const fromId = targetUser.role === 'service_provider' ? targetUser.id : currentUser.id;
+                const toId = targetUser.role === 'service_provider' ? currentUser.id : targetUser.id;
+                
+                await recordPayment(caseItem.id, fromId, toId, payAmount, type, notes);
+                remaining -= payAmount;
+            }
+        }
+        
+        hideModal('paymentModal');
+        showToast('Payment recorded!', 'success');
+        
+        selectedCases.clear();
+        await loadCases();
+        await loadPaymentHistory();
+    }
+    
+    async function loadPaymentHistory() {
+        const transactions = await getUserTransactions(targetUser.id);
+        
+        const container = document.getElementById('paymentHistory');
+        
+        if (!transactions || transactions.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p ar="لا توجد مدفوعات">No payments yet</p></div>';
+            return;
+        }
+        
+        container.innerHTML = transactions.map(t => {
+            const isCredit = t.to_user_id === targetUser.id;
+            return `
+                <div class="transaction-item">
+                    <div>
+                        <strong>${t.cases?.case_number ? `Case #${t.cases.case_number}` : 'Manual'}</strong>
+                        <div class="text-sm text-muted">${t.notes || t.type}</div>
+                        <div class="text-sm text-muted">${formatDate(t.created_at)}</div>
+                    </div>
+                    <div class="transaction-amount ${isCredit ? 'positive' : 'negative'}">
+                        ${isCredit ? '+' : '-'}${formatCurrency(t.amount)}
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        translatePage();
+    }
+</script>
+</body>
+</html>
