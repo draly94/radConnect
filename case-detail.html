@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#2563eb" />
+    <title ar="رادكونكت - تفاصيل الحالة">RadConnect - Case Detail</title>
+            <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/rtl.css" />
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand" ar="رادكونكت">RadConnect</div>
+        <div class="nav-links">
+            <a href="dashboard.html" ar="لوحة التحكم">Dashboard</a>
+            <a href="cases.html" ar="الحالات">Cases</a>
+            <a href="wallet.html" ar="المحفظة">Wallet</a>
+            <a href="pricing.html" ar="الأسعار">Pricing</a>
+            <a href="profile.html" ar="الملف الشخصي">Profile</a>
+            <a href="admin/index.html" id="adminLink" style="display: none;" ar="الإدارة">Admin</a>
+        </div>
+        <div class="nav-actions">
+            <button onclick="toggleTheme()">🌓</button>
+            <button onclick="toggleLang()">AR</button>
+            <button onclick="logout()" ar="تسجيل الخروج">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <div>
+                <a href="cases.html" class="text-sm text-muted" ar="← العودة للحالات">← Back to Cases</a>
+                <h1 id="caseTitle" ar="تحميل...">Loading...</h1>
+            </div>
+            <span id="caseStatus" class="badge"></span>
+        </div>
+
+        <div id="caseContent">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p ar="جاري تحميل تفاصيل الحالة...">Loading case details...</p>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div id="actionButtons" class="flex gap-1 mt-3 flex-wrap"></div>
+    </main>
+
+    <!-- Accept Case Modal (Radiologist) -->
+    <div id="acceptModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 ar="قبول الحالة">Accept Case</h3>
+                <button class="modal-close" onclick="hideModal('acceptModal')">&times;</button>
+            </div>
+            <p ar="هل أنت متأكد من قبول هذه الحالة؟">Are you sure you want to accept this case?</p>
+            <div class="flex gap-1 mt-2">
+                <button class="btn btn-primary" onclick="acceptCase()" ar="قبول">Accept</button>
+                <button class="btn btn-outline" onclick="hideModal('acceptModal')" ar="إلغاء">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reject/Revision Modal -->
+    <div id="rejectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="rejectModalTitle" ar="سبب الرفض">Rejection Reason</h3>
+                <button class="modal-close" onclick="hideModal('rejectModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label for="rejectReason" ar="السبب">Reason</label>
+                <textarea id="rejectReason" required ar-placeholder="اكتب سبب الرفض...">Please explain the reason...</textarea>
+            </div>
+            <div class="flex gap-1 mt-2">
+                <button class="btn btn-danger" id="confirmRejectBtn" ar="رفض">Reject</button>
+                <button class="btn btn-outline" onclick="hideModal('rejectModal')" ar="إلغاء">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit Report Modal (Radiologist) -->
+    <div id="submitModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 ar="تقديم التقرير">Submit Report</h3>
+                <button class="modal-close" onclick="hideModal('submitModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label for="radNotes" ar="ملاحظات التقرير">Report Notes</label>
+                <textarea id="radNotes" ar-placeholder="اكتب ملاحظاتك على التقرير...">Enter your report notes...</textarea>
+            </div>
+            <div class="form-group">
+                <label ar="رفع ملفات التقرير">Upload Report Files</label>
+                <input type="file" id="radFiles" multiple />
+                <div id="radFileList" class="file-list"></div>
+            </div>
+            <div class="flex gap-1 mt-2">
+                <button class="btn btn-primary" onclick="submitReport()" ar="تقديم">Submit</button>
+                <button class="btn btn-outline" onclick="hideModal('submitModal')" ar="إلغاء">Cancel</button>
+            </div>
+        </div>
+    </div>
+<!-- Dispute Modal -->
+<div id="disputeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 ar="اعتراض أو ملاحظات">Dispute or Leave Feedback</h3>
+            <button class="modal-close" onclick="hideModal('disputeModal')">&times;</button>
+        </div>
+        <div class="form-group">
+            <label for="disputeReason" ar="سبب الاعتراض أو الملاحظات">Reason or Feedback</label>
+            <textarea id="disputeReason" required ar-placeholder="اذكر سبب الاعتراض أو ملاحظاتك..."></textarea>
+        </div>
+        <div class="flex gap-1 mt-2">
+            <button class="btn btn-warning" onclick="submitDispute()" ar="تقديم">Submit</button>
+            <button class="btn btn-outline" onclick="hideModal('disputeModal')" ar="إلغاء">Cancel</button>
+        </div>
+    </div>
+</div>
+    <!-- Edit Price/Deadline Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 ar="تعديل السعر والموعد النهائي">Edit Price & Deadline</h3>
+            <button class="modal-close" onclick="hideModal('editModal')">&times;</button>
+        </div>
+        <div class="form-group">
+            <label for="editPrice" ar="السعر">Price (USD)</label>
+            <input type="number" id="editPrice" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+            <label for="editDeadline" ar="الموعد النهائي">Deadline</label>
+            <input type="datetime-local" id="editDeadline">
+        </div>
+        <div id="editError" class="error-message"></div>
+        <div class="flex gap-1 mt-2">
+            <button class="btn btn-primary" onclick="saveEdit()" ar="حفظ">Save</button>
+            <button class="btn btn-outline" onclick="hideModal('editModal')" ar="إلغاء">Cancel</button>
+        </div>
+    </div>
+</div>
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+    </script>
+    <script src="js/config.js">
+    </script>
+    <script src="js/auth.js">
+    </script>
+    <script src="js/utils.js">
+    </script>
+    <script src="js/theme.js">
+    </script>
+    <script src="js/api.js">
+    </script>
+    <script>
+        // ================================================================
+        // NO variable declarations here - all are in external scripts
+        // currentUser is declared in auth.js
+        // CONFIG is declared in config.js
+        // ================================================================
+
+        // ================================================================
+        // Page-specific variables (these are safe to declare)
+        // ================================================================
+        let currentCase = null;
+        let rejectAction = null;
+
+        // ================================================================
+        // DOM Ready
+        // ================================================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check auth - this sets currentUser and currentProfile
+            const user = await checkAuth();
+            if (!user) return;
+
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+  
+            if (isAdmin()) {
+                document.getElementById('adminLink').style.display = 'inline';
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            const caseId = params.get('id');
+
+            if (!caseId) {
+                window.location.href = 'cases.html';
+                return;
+            }
+
+            await loadCaseDetail(caseId);
+        });
+
+        // ================================================================
+        // loadCaseDetail
+        // ================================================================
+        async function loadCaseDetail(caseId) {
+            currentCase = await getCaseById(caseId);
+
+            if (!currentCase) {
+                document.getElementById('caseContent').innerHTML = `
+                        <div class="empty-state">
+                            <p ar="الحالة غير موجودة">Case not found</p>
+                        </div>`;
+                return;
+            }
+
+            document.getElementById('caseTitle').textContent = `Case #${currentCase.case_number}`;
+
+            const statusBadge = document.getElementById('caseStatus');
+            statusBadge.textContent = formatStatus(currentCase.status);
+            statusBadge.className = `badge badge-${getStatusBadge(currentCase.status)}`;
+
+            const otherParty = isSP() ?
+                (currentCase.assigned_radiologist_id ? `Radiologist #${currentCase.assigned_radiologist_id.slice(0, 4)}` :
+                    'Unassigned') :
+                isRad() ?
+                `Provider #${currentCase.provider_id.slice(0, 4)}` :
+                `SP: ${currentCase.provider_id?.slice(0, 4) || 'N/A'} | Rad: ${currentCase.assigned_radiologist_id?.slice(0, 4) || 'Unassigned'}`;
+
+            document.getElementById('caseContent').innerHTML = `
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3 ar="تفاصيل الحالة">Case Details</h3>
+                            <div class="mt-1">
+                                <p><strong ar="الطريقة">Modality:</strong> ${currentCase.modality?.join(', ') || '-'}</p>
+                                <p><strong ar="النظام">Body System:</strong> ${currentCase.body_system?.join(', ') || '-'}</p>
+                                <p><strong ar="الأولوية">Urgency:</strong> ${currentCase.urgency}</p>
+                                <p><strong ar="الطرف الآخر">Other Party:</strong> ${otherParty}</p>
+                                <p><strong ar="التاريخ">Created:</strong> ${formatDate(currentCase.created_at)}</p>
+                                ${currentCase.deadline ? `<p><strong ar="الموعد النهائي">Deadline:</strong> ${formatDate(currentCase.deadline)}</p>` : ''}
+                                ${currentCase.price ? `<p><strong ar="السعر">Price:</strong> ${formatCurrency(currentCase.price)}</p>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3 ar="الملاحظات">Notes</h3>
+                            <div class="mt-1">
+                                <p><strong ar="ملاحظات مقدم الخدمة">Provider Notes:</strong></p>
+                                <p>${currentCase.admin_cleaned_provider_notes || currentCase.provider_notes || 'No notes'}</p>
+
+                                ${currentCase.radiologist_notes ? `
+                                    <p class="mt-1"><strong ar="تقرير الطبيب">Radiologist Report:</strong></p>
+                                    <p>${currentCase.admin_cleaned_radiologist_notes || currentCase.radiologist_notes}</p>
+                                ` : ''}
+
+                                ${currentCase.rejection_reason ? `
+                                    <p class="mt-1" style="color: var(--danger);"><strong ar="سبب الرفض">Rejection Reason:</strong></p>
+                                    <p>${currentCase.rejection_reason}</p>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-2">
+                        <h3 ar="الملفات">Files</h3>
+                        ${currentCase.files_deleted_at ? 
+                            '<p class="text-muted mt-1" ar="انتهت صلاحية الملفات">Files have expired and been deleted per retention policy.</p>' :
+                            renderFilesList(currentCase.provider_files || [], 'Provider Files', CONFIG.STORAGE_BUCKET_SP)
+                        }
+                        ${currentCase.radiologist_files?.length ? 
+                            renderFilesList(currentCase.radiologist_files, 'Radiologist Files', CONFIG.STORAGE_BUCKET_RAD) : ''}
+                    </div>
+                `;
+
+            renderActionButtons();
+            translatePage();
+        }
+
+        // ================================================================
+        // renderFilesList
+        // ================================================================
+        function renderFilesList(files, title, bucket) {
+            if (!files.length) return '';
+
+            return `
+                    <p class="mt-1"><strong>${title}:</strong></p>
+                    <div class="file-list">
+                        ${files.map(f => `
+                            <div class="file-item">
+                                <span>${f.name}</span>
+                                <button class="btn btn-sm btn-outline" onclick="downloadFile('${bucket}', '${f.path}')" ar="تحميل">Download</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+        }
+
+        // ================================================================
+        // downloadFile
+        // ================================================================
+async function downloadFile(bucket, path) {
+    try {
+        const url = `${CONFIG.SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+        
+        // Fetch and download
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = path.split('/').pop();
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+        showToast('Error downloading file', 'error');
+    }
+}
+
+        // ================================================================
+        // renderActionButtons
+        // ================================================================
+        function renderActionButtons() {
+            const buttons = document.getElementById('actionButtons');
+            buttons.innerHTML = '';
+
+            if (!currentCase) return;
+
+            // Radiologist: Accept open case
+            if (isRad() && currentCase.status === 'awaiting_radiologist' && !currentCase.assigned_radiologist_id) {
+                buttons.innerHTML +=
+                    `<button class="btn btn-success" onclick="showModal('acceptModal')" ar="قبول الحالة">Accept Case</button>`;
+            }
+
+            // Radiologist: Submit report
+            if (isRad() && ['assigned', 'in_progress', 'revision_requested'].includes(currentCase.status) &&
+                currentCase.assigned_radiologist_id === currentUser.id) {
+                buttons.innerHTML +=
+                    `<button class="btn btn-primary" onclick="showModal('submitModal')" ar="تقديم التقرير">Submit Report</button>`;
+            }
+
+            // SP: Review work
+            if (isSP() && currentCase.status === 'pending_sp_review') {
+                buttons.innerHTML += `
+                        <button class="btn btn-success" onclick="spAction('accept')" ar="قبول">Accept</button>
+                        <button class="btn btn-danger" onclick="setRejectAction('spReject'); showModal('rejectModal')" ar="رفض">Reject</button>
+                    `;
+            }
+
+            // SP: Resubmit rejected case
+            if (isSP() && currentCase.status === 'rejected_by_admin') {
+                buttons.innerHTML +=
+                    `<button class="btn btn-primary" onclick="window.location.href='new-case.html?edit=${currentCase.id}'" ar="تعديل وإعادة تقديم">Edit & Resubmit</button>`;
+            }
+// SP: Dispute completed case
+if (isSP() && currentCase.status === 'completed') {
+    buttons.innerHTML += `
+        <button class="btn btn-warning" onclick="showDisputeModal()" ar="اعتراض">Dispute / Feedback</button>
+    `;
+}
+// Admin: Edit price/deadline (hidden when pending admin review)
+if (isAdmin() && 
+    currentCase.status !== 'resolved_closed' &&
+    currentCase.status !== 'pending_admin_review' &&
+    currentCase.status !== 'pending_admin_review_rad_work') {
+    buttons.innerHTML += `
+        <button class="btn btn-outline" onclick="showEditModal()" ar="تعديل السعر والموعد">Edit Price/Deadline</button>
+    `;
+}
+            // Admin actions
+            if (isAdmin()) {
+                if (currentCase.status === 'pending_admin_review') {
+                    buttons.innerHTML += `
+                            <button class="btn btn-success" onclick="window.location.href='admin/review-case.html?id=${currentCase.id}&action=accept'">Accept</button>
+                            <button class="btn btn-danger" onclick="setRejectAction('adminReject'); showModal('rejectModal')">Reject</button>
+                        `;
+                }
+                if (currentCase.status === 'pending_admin_review_rad_work') {
+                    buttons.innerHTML += `
+                            <button class="btn btn-success" onclick="window.location.href='admin/review-case.html?id=${currentCase.id}&action=reviewRad'">Review Report</button>
+                        `;
+                }
+                if (currentCase.status === 'disputed') {
+                    buttons.innerHTML += `
+                            <button class="btn btn-primary" onclick="window.location.href='admin/review-case.html?id=${currentCase.id}&action=resolve'">Resolve Dispute</button>
+                        `;
+                }
+            }
+        }
+function showEditModal() {
+    document.getElementById('editPrice').value = currentCase.price || '';
+    
+    if (currentCase.deadline) {
+        const deadline = new Date(currentCase.deadline);
+        document.getElementById('editDeadline').value = deadline.toISOString().slice(0, 16);
+    } else {
+        document.getElementById('editDeadline').value = '';
+    }
+    
+    document.getElementById('editError').classList.remove('show');
+    showModal('editModal');
+}
+
+async function saveEdit() {
+    const errorDiv = document.getElementById('editError');
+    errorDiv.classList.remove('show');
+    
+    const price = document.getElementById('editPrice').value;
+    const deadline = document.getElementById('editDeadline').value;
+    
+    const updates = {};
+    
+    if (price) {
+        updates.price = parseFloat(price);
+    }
+    
+    if (deadline) {
+        updates.deadline = new Date(deadline).toISOString();
+    }
+    
+    if (Object.keys(updates).length === 0) {
+        errorDiv.textContent = 'No changes made';
+        errorDiv.classList.add('show');
+        return;
+    }
+    
+    try {
+        await updateCase(currentCase.id, updates);
+        hideModal('editModal');
+        showToast('Updated successfully', 'success');
+        location.reload();
+    } catch (error) {
+        errorDiv.textContent = error.message;
+        errorDiv.classList.add('show');
+    }
+}
+        // ================================================================
+        // setRejectAction - sets the global variable
+        // ================================================================
+        function setRejectAction(type) {
+            rejectAction = type;
+            document.getElementById('rejectModalTitle').textContent = 'Rejection Reason';
+            document.getElementById('confirmRejectBtn').textContent = 'Reject';
+        }
+
+        // ================================================================
+        // acceptCase
+        // ================================================================
+        async function acceptCase() {
+            await updateCase(currentCase.id, {
+                status: 'in_progress',
+                assigned_radiologist_id: currentUser.id,
+                assigned_at: new Date()
+            });
+            hideModal('acceptModal');
+            showToast('Case accepted!', 'success');
+            location.reload();
+        }
+
+        // ================================================================
+        // submitReport
+        // ================================================================
+        async function submitReport() {
+            const notes = document.getElementById('radNotes').value;
+            const files = document.getElementById('radFiles').files;
+
+            const uploadedFiles = [];
+            for (const file of files) {
+                const result = await uploadFile(CONFIG.STORAGE_BUCKET_RAD, currentCase.id, file);
+                uploadedFiles.push(result);
+            }
+
+            const currentFiles = currentCase.radiologist_files || [];
+
+            await updateCase(currentCase.id, {
+                status: 'pending_admin_review_rad_work',
+                radiologist_notes: notes,
+                radiologist_files: [...currentFiles, ...uploadedFiles],
+                submitted_by_rad_at: new Date()
+            });
+
+            hideModal('submitModal');
+            showToast('Report submitted!', 'success');
+            location.reload();
+        }
+
+        // ================================================================
+        // spAction
+        // ================================================================
+        async function spAction(action) {
+            if (action === 'accept') {
+                await updateCase(currentCase.id, {
+                    status: 'completed',
+                    completed_at: new Date()
+                });
+                showToast('Case completed!', 'success');
+                location.reload();
+            }
+        }
+
+        // ================================================================
+        // Reject confirmation listener (uses global rejectAction)
+        // ================================================================
+        document.getElementById('confirmRejectBtn').addEventListener('click', async () => {
+            const reason = document.getElementById('rejectReason').value;
+            if (!reason) return;
+
+            if (rejectAction === 'adminReject') {
+                await updateCase(currentCase.id, {
+                    status: 'rejected_by_admin',
+                    rejection_reason: reason
+                });
+            } else if (rejectAction === 'spReject') {
+                await updateCase(currentCase.id, {
+                    status: 'disputed',
+                    rejection_reason: reason
+                });
+            } else {
+                // fallback: just update with reason
+                await updateCase(currentCase.id, {
+                    rejection_reason: reason
+                });
+            }
+
+            hideModal('rejectModal');
+            showToast('Action completed', 'success');
+            location.reload();
+        });
+
+        // ================================================================
+        // helper: getStatusBadge
+        // ================================================================
+        function getStatusBadge(status) {
+            if (status.includes('pending') || status === 'awaiting_radiologist') return 'pending';
+            if (status === 'in_progress' || status === 'assigned') return 'progress';
+            if (status === 'completed' || status === 'resolved_closed') return 'completed';
+            if (status.includes('reject') || status === 'disputed') return 'rejected';
+            return 'pending';
+        }
+
+        // ================================================================
+        // Fix: Rename conflicting downloadFile function
+        // The api.js version uses this name, so we rename ours
+        // ================================================================
+        // The downloadFile function above has been renamed to avoid conflict
+        // with the one in api.js. We'll use the api.js version instead.
+        // ================================================================
+
+        // ================================================================
+        // Ensure currentUser is available from auth.js
+        // ================================================================
+        // currentUser is defined in auth.js - no need to redeclare
+        // CONFIG is defined in config.js - no need to redeclare
+
+        console.log('Case detail page loaded successfully');
+        console.log('Current user:', currentUser);
+        console.log('Current profile:', currentProfile);
+    
+    function showDisputeModal() {
+    document.getElementById('disputeReason').value = '';
+    showModal('disputeModal');
+}
+
+async function submitDispute() {
+    const reason = document.getElementById('disputeReason').value;
+    if (!reason) return;
+    
+    await updateCase(currentCase.id, {
+        status: 'disputed',
+        rejection_reason: reason
+    });
+    
+    hideModal('disputeModal');
+    showToast('Feedback submitted to admin', 'success');
+    location.reload();
+}
+    </script>
+</body>
+</html>

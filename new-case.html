@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <title ar="رادكونكت - حالة جديدة">RadConnect - New Case</title>
+            <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/rtl.css">
+    <style>
+        .modality-option {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.6rem;
+            transition: all 0.2s;
+        }
+        .modality-option:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        .modality-option label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            margin: 0;
+        }
+        .modality-option .desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-left: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand" ar="رادكونكت">RadConnect</div>
+        <div class="nav-links">
+            <a href="dashboard.html" ar="لوحة التحكم">Dashboard</a>
+            <a href="cases.html" class="active" ar="الحالات">Cases</a>
+            <a href="wallet.html" ar="المحفظة">Wallet</a>
+            <a href="pricing.html" ar="الأسعار">Pricing</a>
+            <a href="profile.html" ar="الملف الشخصي">Profile</a>
+        </div>
+        <div class="nav-actions">
+            <button onclick="toggleTheme()">🌓</button>
+            <button onclick="toggleLang()">AR</button>
+            <button onclick="logout()" ar="تسجيل الخروج">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h1 ar="حالة جديدة">New Case</h1>
+            <a href="cases.html" class="btn btn-outline btn-sm" ar="إلغاء">Cancel</a>
+        </div>
+
+        <form id="newCaseForm" class="card" style="max-width: 800px;">
+            
+            <div class="form-group">
+                <label for="practiceType" ar="نوع الممارسة">Practice Type</label>
+                <select id="practiceType">
+                    <option value="dental" ar="طب أسنان">Dental</option>
+                    <option value="medical" ar="طبي">Medical</option>
+                </select>
+            </div>
+
+            <div id="dentalModalities">
+                <label ar="طرائق الأسنان" style="font-weight: 600; display: block; margin: 1rem 0 0.5rem;">Dental Modalities</label>
+                <div class="checkbox-grid">
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="panoramic">
+                            <span ar="بانوراما">Panoramic</span></label>
+                        <div class="desc" ar="أشعة بانورامية للفكين بالكامل">Full mouth panoramic view</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="periapical">
+                            <span ar="حول الذروة">Periapical</span></label>
+                        <div class="desc" ar="تصوير سن واحد من الجذر للتاج">Single tooth root to crown</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="bitewing">
+                            <span ar="جناح العضة">Bitewing</span></label>
+                        <div class="desc" ar="تصوير التيجان والأسنان الخلفية">Crowns and posterior teeth</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="occlusal">
+                            <span ar="إطباقي">Occlusal</span></label>
+                        <div class="desc" ar="تصوير سقف الحنك أو أرضية الفم">Palate or floor of mouth</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="cbct">
+                            <span>CBCT</span></label>
+                        <div class="desc" ar="تصوير مقطعي مخروطي ثلاثي الأبعاد">3D cone beam CT scan</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="cephalometric">
+                            <span ar="رأسي">Cephalometric</span></label>
+                        <div class="desc" ar="تصوير جانبي للجمجمة والوجه">Lateral skull and face view</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="medicalModalities" style="display: none;">
+                <label ar="الطرائق الطبية" style="font-weight: 600; display: block; margin: 1rem 0 0.5rem;">Medical Modalities</label>
+                <div class="checkbox-grid">
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="xray">
+                            <span>X-Ray</span></label>
+                        <div class="desc" ar="تصوير بالأشعة السينية العامة">General radiography</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="ct">
+                            <span>CT</span></label>
+                        <div class="desc" ar="تصوير مقطعي محوسب">Computed tomography</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="mri">
+                            <span>MRI</span></label>
+                        <div class="desc" ar="تصوير بالرنين المغناطيسي">Magnetic resonance imaging</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="ultrasound">
+                            <span ar="موجات فوق صوتية">Ultrasound</span></label>
+                        <div class="desc" ar="تصوير بالموجات الصوتية">Sonography</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="mammography">
+                            <span ar="تصوير الثدي">Mammography</span></label>
+                        <div class="desc" ar="فحص تصوير الثدي بالأشعة">Breast imaging</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="modality" value="nuclear_medicine">
+                            <span ar="طب نووي">Nuclear Medicine</span></label>
+                        <div class="desc" ar="تصوير وظيفي بالنظائر المشعة">Functional isotope imaging</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="medicalBodySystems" style="display: none;">
+                <label ar="أنظمة الجسم" style="font-weight: 600; display: block; margin: 1rem 0 0.5rem;">Body Systems</label>
+                <div class="checkbox-grid">
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="bodySystem" value="neuro">
+                            <span ar="الدماغ والأعصاب">Neuro</span></label>
+                        <div class="desc" ar="الدماغ والجهاز العصبي">Brain & nervous system</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="bodySystem" value="chest">
+                            <span ar="الصدر">Chest</span></label>
+                        <div class="desc" ar="الرئتين والقلب والمنصف">Lungs, heart & mediastinum</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="bodySystem" value="msk">
+                            <span ar="عضلي هيكلي">MSK</span></label>
+                        <div class="desc" ar="العظام والمفاصل والعضلات">Bones, joints & muscles</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="bodySystem" value="abdominal">
+                            <span ar="البطن">Abdominal</span></label>
+                        <div class="desc" ar="أعضاء البطن والحوض">Abdominal & pelvic organs</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="bodySystem" value="spine">
+                            <span ar="العمود الفقري">Spine</span></label>
+                        <div class="desc" ar="الفقرات والأقراص بينها">Vertebrae & discs</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="bodySystem" value="cardiac">
+                            <span ar="القلب">Cardiac</span></label>
+                        <div class="desc" ar="القلب والأوعية الكبيرة">Heart & great vessels</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="bodySystem" value="vascular">
+                            <span ar="الأوعية الدموية">Vascular</span></label>
+                        <div class="desc" ar="الشرايين والأوردة">Arteries & veins</div>
+                    </div>
+                    <div class="modality-option">
+                        <label><input type="checkbox" name="bodySystem" value="pediatric">
+                            <span ar="الأطفال">Pediatric</span></label>
+                        <div class="desc" ar="تصوير الأطفال والمواليد">Children & newborns</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="urgency" ar="الأولوية">Urgency</label>
+                <select id="urgency" required>
+                    <option value="routine" ar="روتيني">Routine</option>
+                    <option value="stat" ar="عاجل">Stat</option>
+                    <option value="emergency" ar="طارئ">Emergency</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="notes" ar="ملاحظات سريرية">Clinical Notes</label>
+                <textarea id="notes" rows="4" ar-placeholder="أدخل التاريخ السريري والملاحظات..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label ar="الملفات">Files</label>
+                <div class="file-upload-area" id="dropZone">
+                    <p ar="اسحب وأفلت الملفات هنا أو انقر للاختيار">Drag & drop files here or click to browse</p>
+                    <small class="text-muted" ar="DICOM, JPEG, PNG, PDF, ZIP">DICOM, JPEG, PNG, PDF, ZIP</small>
+                </div>
+                <input type="file" id="fileInput" multiple style="display: none;" accept=".dcm,.jpg,.jpeg,.png,.pdf,.zip">
+                <div id="fileList" class="file-list"></div>
+                <div id="uploadProgress" style="display: none; margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                        <span ar="جاري الرفع...">Uploading...</span>
+                        <span id="uploadPercent">0%</span>
+                    </div>
+                    <div style="background: var(--border); border-radius: 4px; height: 8px; overflow: hidden;">
+                        <div id="progressBar" style="background: var(--primary); height: 100%; width: 0%; transition: width 0.2s;"></div>
+                    </div>
+                    <div id="uploadStatus" class="text-sm text-muted mt-1"></div>
+                </div>
+            </div>
+
+            <div id="formError" class="error-message"></div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-block" id="submitBtn" ar="تقديم الحالة">
+                Submit Case
+            </button>
+        </form>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let selectedFiles = [];
+        let isSubmitting = false;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+            
+            if (!isSP()) {
+                window.location.href = 'dashboard.html';
+                return;
+            }
+            
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+  
+            document.getElementById('practiceType').addEventListener('change', updatePracticeType);
+            
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            
+            dropZone.addEventListener('click', () => {
+                if (!isSubmitting) fileInput.click();
+            });
+            
+            dropZone.addEventListener('dragover', (e) => {
+                if (isSubmitting) return;
+                e.preventDefault();
+                dropZone.style.borderColor = 'var(--primary)';
+                dropZone.style.background = 'var(--primary-light)';
+            });
+            
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.style.borderColor = 'var(--border)';
+                dropZone.style.background = 'var(--bg-input)';
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                if (isSubmitting) return;
+                e.preventDefault();
+                dropZone.style.borderColor = 'var(--border)';
+                dropZone.style.background = 'var(--bg-input)';
+                handleFiles(e.dataTransfer.files);
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (!isSubmitting) handleFiles(e.target.files);
+            });
+            
+            const params = new URLSearchParams(window.location.search);
+            const editId = params.get('edit');
+            if (editId) loadCaseForEdit(editId);
+        });
+        
+        function updatePracticeType() {
+            const type = document.getElementById('practiceType').value;
+            document.getElementById('dentalModalities').style.display = type === 'dental' ? 'block' : 'none';
+            document.getElementById('medicalModalities').style.display = type === 'medical' ? 'block' : 'none';
+            document.getElementById('medicalBodySystems').style.display = type === 'medical' ? 'block' : 'none';
+        }
+        
+        function handleFiles(files) {
+            if (isSubmitting) return;
+            for (const file of files) {
+                if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                    selectedFiles.push(file);
+                }
+            }
+            renderFileList();
+        }
+        
+        function removeFile(index) {
+            if (isSubmitting) return;
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        }
+        
+        function renderFileList() {
+            const container = document.getElementById('fileList');
+            if (selectedFiles.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
+            const estimatedSeconds = Math.ceil(totalSize / (500 * 1024));
+            
+            container.innerHTML = `
+                <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary);">
+                    <span>${selectedFiles.length} file(s) - ${formatSize(totalSize)}</span>
+                    <span ar="الوقت المقدر">Est. upload: ${formatTime(estimatedSeconds)}</span>
+                </div>
+                ${selectedFiles.map((file, i) => `
+                    <div class="file-item">
+                        <div>
+                            <span>${file.name}</span>
+                            <small class="text-muted">(${formatSize(file.size)})</small>
+                        </div>
+                        ${!isSubmitting ? `<button type="button" class="btn btn-sm btn-outline" onclick="removeFile(${i})" ar="إزالة">Remove</button>` : ''}
+                    </div>
+                `).join('')}
+            `;
+        }
+        
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+        
+        function formatTime(seconds) {
+            if (seconds < 60) return seconds + 's';
+            return Math.ceil(seconds / 60) + ' min';
+        }
+        
+        async function loadCaseForEdit(caseId) {
+            const caseData = await getCaseById(caseId);
+            if (!caseData || caseData.provider_id !== currentUser.id) return;
+            
+            document.getElementById('notes').value = caseData.provider_notes || '';
+            document.getElementById('urgency').value = caseData.urgency;
+            
+            caseData.modality?.forEach(m => {
+                const cb = document.querySelector(`input[name="modality"][value="${m}"]`);
+                if (cb) cb.checked = true;
+            });
+            
+            caseData.body_system?.forEach(s => {
+                const cb = document.querySelector(`input[name="bodySystem"][value="${s}"]`);
+                if (cb) cb.checked = true;
+            });
+        }
+        
+// Bulletproof upload with multiple fallback strategies
+async function uploadFileWithProgress(bucket, path, file, accessToken, onProgress, retryCount = 0) {
+    const MAX_RETRIES = 10;
+    const STRATEGIES = ['xmlhttprequest', 'fetch'];
+    
+    // Try current strategy
+    if (retryCount < 5) {
+        return tryXHRUpload(bucket, path, file, accessToken, onProgress, retryCount);
+    } else {
+        // Switch to fetch after 5 failed XHR attempts
+        return tryFetchUpload(bucket, path, file, accessToken, onProgress, retryCount);
+    }
+}
+
+function tryXHRUpload(bucket, path, file, accessToken, onProgress, retryCount) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        let lastProgressTime = Date.now();
+        let lastLoaded = 0;
+        const MAX_RETRIES = 10;
+        const STALL_TIMEOUT = 15000;
+        
+        const connectionCheck = setInterval(() => {
+            const timeSinceProgress = Date.now() - lastProgressTime;
+            if (timeSinceProgress > STALL_TIMEOUT) {
+                clearInterval(connectionCheck);
+                xhr.abort();
+                handleRetry('stalled');
+            }
+        }, 3000);
+        
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                lastProgressTime = Date.now();
+                lastLoaded = e.loaded;
+                onProgress(e.loaded, e.total);
+            }
+        });
+        
+        xhr.addEventListener('load', () => {
+            clearInterval(connectionCheck);
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve({ path, method: 'xhr' });
+            } else {
+                handleRetry(`http_${xhr.status}`);
+            }
+        });
+        
+        xhr.addEventListener('error', () => {
+            clearInterval(connectionCheck);
+            handleRetry('network');
+        });
+        
+        xhr.addEventListener('timeout', () => {
+            clearInterval(connectionCheck);
+            handleRetry('timeout');
+        });
+        
+        xhr.addEventListener('abort', () => {
+            clearInterval(connectionCheck);
+        });
+        
+        function handleRetry(reason) {
+            if (retryCount < MAX_RETRIES) {
+                const delay = Math.min(Math.pow(2, retryCount) * 1000, 30000);
+                updateStatus(`Retry ${retryCount + 1}/${MAX_RETRIES} in ${delay/1000}s (${reason})`);
+                
+                setTimeout(() => {
+                    updateStatus(`Retrying: ${file.name}...`);
+                    uploadFileWithProgress(bucket, path, file, accessToken, onProgress, retryCount + 1)
+                        .then(resolve)
+                        .catch(reject);
+                }, delay);
+            } else {
+                reject(new Error(`FAILED: ${reason}`));
+            }
+        }
+        
+        const url = `${CONFIG.SUPABASE_URL}/storage/v1/object/${bucket}/${path}`;
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        xhr.open('POST', url);
+        xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+        xhr.timeout = 60000;
+        xhr.send(formData);
+    });
+}
+
+async function tryFetchUpload(bucket, path, file, accessToken, onProgress, retryCount) {
+    const MAX_RETRIES = 10;
+    const url = `${CONFIG.SUPABASE_URL}/storage/v1/object/${bucket}/${path}`;
+    
+    // Fetch doesn't support upload progress natively, so we simulate
+    const totalSize = file.size;
+    let simulatedLoaded = 0;
+    
+    const progressInterval = setInterval(() => {
+        simulatedLoaded = Math.min(simulatedLoaded + (totalSize * 0.05), totalSize * 0.9);
+        onProgress(simulatedLoaded, totalSize);
+    }, 500);
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: formData
+        });
+        
+        clearInterval(progressInterval);
+        
+        if (response.ok) {
+            onProgress(totalSize, totalSize);
+            return { path, method: 'fetch' };
+        } else {
+            throw new Error(`HTTP ${response.status}`);
+        }
+    } catch (error) {
+        clearInterval(progressInterval);
+        
+        if (retryCount < MAX_RETRIES) {
+            const delay = Math.min(Math.pow(2, retryCount) * 1000, 30000);
+            updateStatus(`Fetch retry ${retryCount + 1}/${MAX_RETRIES} in ${delay/1000}s`);
+            
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return tryFetchUpload(bucket, path, file, accessToken, onProgress, retryCount + 1);
+        }
+        
+        throw error;
+    }
+}
+
+function updateStatus(message) {
+    const uploadStatus = document.getElementById('uploadStatus');
+    if (uploadStatus) {
+        uploadStatus.textContent = message;
+    }
+}
+
+// Chunked upload for large files (fallback for very unstable connections)
+async function uploadFileChunked(bucket, path, file, accessToken, onProgress) {
+    const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    const uploadId = Date.now().toString();
+    
+    for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, file.size);
+        const chunk = file.slice(start, end);
+        
+        const chunkPath = `${path}.chunk${i}`;
+        const chunkFormData = new FormData();
+        chunkFormData.append('file', chunk);
+        chunkFormData.append('uploadId', uploadId);
+        chunkFormData.append('chunkIndex', i);
+        chunkFormData.append('totalChunks', totalChunks);
+        
+        let uploaded = false;
+        let attempts = 0;
+        
+        while (!uploaded && attempts < 5) {
+            try {
+                const response = await fetch(
+                    `${CONFIG.SUPABASE_URL}/storage/v1/object/${bucket}/${chunkPath}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${accessToken}` },
+                        body: chunkFormData
+                    }
+                );
+                
+                if (response.ok) {
+                    uploaded = true;
+                    const progress = Math.round(((i + 1) / totalChunks) * 100);
+                    onProgress(end, file.size);
+                    updateStatus(`Chunk ${i + 1}/${totalChunks} (${progress}%)`);
+                } else {
+                    attempts++;
+                    await new Promise(r => setTimeout(r, 2000 * attempts));
+                }
+            } catch (error) {
+                attempts++;
+                await new Promise(r => setTimeout(r, 2000 * attempts));
+            }
+        }
+        
+        if (!uploaded) {
+            throw new Error(`Failed to upload chunk ${i} after 5 attempts`);
+        }
+    }
+    
+    return { path, method: 'chunked' };
+}
+
+// Main upload orchestrator
+async function uploadFilesWithRetry(caseId, files, accessToken) {
+    const progressDiv = document.getElementById('uploadProgress');
+    const progressBar = document.getElementById('progressBar');
+    const uploadPercent = document.getElementById('uploadPercent');
+    const uploadStatus = document.getElementById('uploadStatus');
+    
+    progressDiv.style.display = 'block';
+    
+    const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+    const uploadedFiles = [];
+    const failedFiles = [];
+    let uploadedSoFar = 0;
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const path = `${caseId}/${Date.now()}_${file.name}`;
+        const fileStartOffset = uploadedSoFar;
+        
+        uploadStatus.textContent = `File ${i + 1} of ${files.length}: ${file.name}`;
+        
+        // Try upload strategies in order
+        let result = null;
+        const isLargeFile = file.size > 50 * 1024 * 1024; // 50MB threshold
+        
+        try {
+            // Strategy 1: XHR with progress (best for most files)
+            result = await uploadFileWithProgress(
+                CONFIG.STORAGE_BUCKET_SP,
+                path,
+                file,
+                accessToken,
+                (loaded, total) => {
+                    const currentTotal = fileStartOffset + loaded;
+                    const percent = Math.min(Math.round((currentTotal / totalSize) * 100), 99);
+                    uploadPercent.textContent = percent + '%';
+                    progressBar.style.width = percent + '%';
+                }
+            );
+        } catch (error1) {
+            console.warn(`XHR upload failed for ${file.name}, trying fetch...`, error1);
+            
+            try {
+                // Strategy 2: Fetch API (fallback)
+                result = await tryFetchUpload(
+                    CONFIG.STORAGE_BUCKET_SP,
+                    path,
+                    file,
+                    accessToken,
+                    (loaded, total) => {
+                        const currentTotal = fileStartOffset + loaded;
+                        const percent = Math.min(Math.round((currentTotal / totalSize) * 100), 99);
+                        uploadPercent.textContent = percent + '%';
+                        progressBar.style.width = percent + '%';
+                    }
+                );
+            } catch (error2) {
+                console.warn(`Fetch upload failed for ${file.name}, trying chunked...`, error2);
+                
+                if (isLargeFile) {
+                    try {
+                        // Strategy 3: Chunked upload (for large files on unstable connections)
+                        result = await uploadFileChunked(
+                            CONFIG.STORAGE_BUCKET_SP,
+                            path,
+                            file,
+                            accessToken,
+                            (loaded, total) => {
+                                const currentTotal = fileStartOffset + loaded;
+                                const percent = Math.min(Math.round((currentTotal / totalSize) * 100), 99);
+                                uploadPercent.textContent = percent + '%';
+                                progressBar.style.width = percent + '%';
+                            }
+                        );
+                    } catch (error3) {
+                        failedFiles.push({ name: file.name, error: 'All strategies failed' });
+                        uploadedSoFar += file.size;
+                        continue;
+                    }
+                } else {
+                    failedFiles.push({ name: file.name, error: error2.message });
+                    uploadedSoFar += file.size;
+                    continue;
+                }
+            }
+        }
+        
+        if (result) {
+            uploadedFiles.push({
+                path: result.path,
+                name: file.name,
+                size: file.size,
+                type: file.type
+            });
+            uploadedSoFar += file.size;
+        }
+    }
+    
+    // Final status
+    const percent = 100;
+    uploadPercent.textContent = percent + '%';
+    progressBar.style.width = percent + '%';
+    
+    if (failedFiles.length > 0 && uploadedFiles.length === 0) {
+        uploadStatus.textContent = `All ${failedFiles.length} files failed. Check connection and try again.`;
+        throw new Error('Upload failed for all files');
+    }
+    
+    if (failedFiles.length > 0) {
+        uploadStatus.textContent = `${uploadedFiles.length} uploaded, ${failedFiles.length} failed: ${failedFiles.map(f => f.name).join(', ')}`;
+    } else {
+        uploadStatus.textContent = 'All files uploaded successfully!';
+    }
+    
+    return uploadedFiles;
+}
+        
+        document.getElementById('newCaseForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (isSubmitting) return;
+            
+            const errorDiv = document.getElementById('formError');
+            errorDiv.classList.remove('show');
+            
+            const practiceType = document.getElementById('practiceType').value;
+            
+            let modalityCheckboxes;
+            if (practiceType === 'dental') {
+                modalityCheckboxes = document.querySelectorAll('#dentalModalities input[name="modality"]:checked');
+            } else {
+                modalityCheckboxes = document.querySelectorAll('#medicalModalities input[name="modality"]:checked');
+            }
+            const modalities = Array.from(modalityCheckboxes).map(cb => cb.value);
+            
+            let bodySystems = [];
+            if (practiceType === 'medical') {
+                const systemCheckboxes = document.querySelectorAll('#medicalBodySystems input[name="bodySystem"]:checked');
+                bodySystems = Array.from(systemCheckboxes).map(cb => cb.value);
+            }
+            
+            const urgency = document.getElementById('urgency').value;
+            const notes = document.getElementById('notes').value;
+            
+            if (modalities.length === 0) {
+                errorDiv.textContent = 'Please select at least one modality';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            if (practiceType === 'medical' && bodySystems.length === 0) {
+                errorDiv.textContent = 'Please select at least one body system';
+                errorDiv.classList.add('show');
+                return;
+            }
+            
+            isSubmitting = true;
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></span> <span ar="جاري التقديم...">Submitting...</span>';
+            
+            document.querySelectorAll('#newCaseForm input, #newCaseForm select, #newCaseForm textarea').forEach(el => el.disabled = true);
+            renderFileList();
+            
+            try {
+                const caseData = await createCase({
+                    modality: modalities,
+                    bodySystem: bodySystems,
+                    urgency,
+                    notes
+                });
+                
+                if (selectedFiles.length > 0) {
+                    const sb = await initSupabase();
+                    const { data: { session } } = await sb.auth.getSession();
+                    
+                    const uploadedFiles = await uploadFilesWithRetry(
+                        caseData.id,
+                        selectedFiles,
+                        session.access_token
+                    );
+                    
+                    await updateCase(caseData.id, {
+                        provider_files: uploadedFiles
+                    });
+                }
+                
+                showToast('Case submitted successfully!', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = 'cases.html';
+                }, 1000);
+                
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.classList.add('show');
+                
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span ar="تقديم الحالة">Submit Case</span>';
+                document.querySelectorAll('#newCaseForm input, #newCaseForm select, #newCaseForm textarea').forEach(el => el.disabled = false);
+                renderFileList();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <title ar="رادكونكت - إنشاء حساب">RadConnect - Sign Up</title>
+            <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/rtl.css">
+    <style>
+        .modality-option {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.6rem;
+            transition: all 0.2s;
+        }
+        .modality-option:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        .modality-option label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            margin: 0;
+        }
+        .modality-option .desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-left: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card" style="max-width: 650px;">
+            <h1 ar="رادكونكت">RadConnect</h1>
+            <p ar="إنشاء حساب جديد">Create New Account</p>
+            
+            <!-- Language Toggle -->
+            <div class="flex-center mb-2">
+                <button type="button" class="btn btn-sm btn-outline" onclick="toggleLang()">AR</button>
+            </div>
+
+            <form id="signupForm">
+                <div class="form-group">
+                    <label for="fullName" ar="الاسم الكامل">Full Name</label>
+                    <input type="text" id="fullName" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email" ar="البريد الإلكتروني">Email</label>
+                    <input type="email" id="email" required autocomplete="email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" ar="كلمة المرور">Password</label>
+                    <input type="password" id="password" required minlength="6">
+                    <small ar="6 أحرف على الأقل">Minimum 6 characters</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="role" ar="التسجيل كـ">I am a</label>
+                    <select id="role" required>
+                        <option value="service_provider" ar="مزود خدمة">Service Provider</option>
+                        <option value="radiologist" ar="طبيب أشعة">Radiologist</option>
+                    </select>
+                </div>
+                
+                <!-- Radiologist Preferences -->
+                <div id="radiologistPrefs" style="display: none;">
+                    
+                    <!-- Practice Type -->
+                    <div class="form-group">
+                        <label for="practiceType" ar="نوع الممارسة">Practice Type</label>
+                        <select id="practiceType">
+                            <option value="dental" ar="طب أسنان">Dental</option>
+                            <option value="medical" ar="طبي">Medical</option>
+                        </select>
+                    </div>
+
+                    <!-- Dental Modalities -->
+                    <div id="dentalModalities">
+                        <label ar="طرائق الأسنان" style="font-weight: 600; display: block; margin: 1rem 0 0.5rem;">Dental Modalities</label>
+                        <div class="checkbox-grid">
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="panoramic" checked>
+                                    <span ar="بانوراما">Panoramic</span>
+                                </label>
+                                <div class="desc" ar="أشعة بانورامية للفكين بالكامل">Full mouth panoramic view</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="periapical" checked>
+                                    <span ar="حول الذروة">Periapical</span>
+                                </label>
+                                <div class="desc" ar="تصوير سن واحد من الجذر للتاج">Single tooth root to crown</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="bitewing" checked>
+                                    <span ar="جناح العضة">Bitewing</span>
+                                </label>
+                                <div class="desc" ar="تصوير التيجان والأسنان الخلفية">Crowns and posterior teeth</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="occlusal" checked>
+                                    <span ar="إطباقي">Occlusal</span>
+                                </label>
+                                <div class="desc" ar="تصوير سقف الحنك أو أرضية الفم">Palate or floor of mouth</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="cbct" checked>
+                                    <span>CBCT</span>
+                                </label>
+                                <div class="desc" ar="تصوير مقطعي مخروطي ثلاثي الأبعاد">3D cone beam CT scan</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="cephalometric" checked>
+                                    <span ar="رأسي">Cephalometric</span>
+                                </label>
+                                <div class="desc" ar="تصوير جانبي للجمجمة والوجه">Lateral skull and face view</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Medical Modalities -->
+                    <div id="medicalModalities" style="display: none;">
+                        <label ar="الطرائق الطبية" style="font-weight: 600; display: block; margin: 1rem 0 0.5rem;">Medical Modalities</label>
+                        <div class="checkbox-grid">
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="xray">
+                                    <span>X-Ray</span>
+                                </label>
+                                <div class="desc" ar="تصوير بالأشعة السينية العامة">General radiography</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="ct">
+                                    <span>CT</span>
+                                </label>
+                                <div class="desc" ar="تصوير مقطعي محوسب">Computed tomography</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="mri">
+                                    <span>MRI</span>
+                                </label>
+                                <div class="desc" ar="تصوير بالرنين المغناطيسي">Magnetic resonance imaging</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="ultrasound">
+                                    <span ar="موجات فوق صوتية">Ultrasound</span>
+                                </label>
+                                <div class="desc" ar="تصوير بالموجات الصوتية">Sonography</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="mammography">
+                                    <span ar="تصوير الثدي">Mammography</span>
+                                </label>
+                                <div class="desc" ar="فحص تصوير الثدي بالأشعة">Breast imaging</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="modality" value="nuclear_medicine">
+                                    <span ar="طب نووي">Nuclear Medicine</span>
+                                </label>
+                                <div class="desc" ar="تصوير وظيفي بالنظائر المشعة">Functional isotope imaging</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Body Systems (Medical only) -->
+                    <div id="medicalBodySystems" style="display: none;">
+                        <label ar="أنظمة الجسم" style="font-weight: 600; display: block; margin: 1rem 0 0.5rem;">Body Systems</label>
+                        <div class="checkbox-grid">
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="bodySystem" value="neuro">
+                                    <span ar="الدماغ والأعصاب">Neuro</span>
+                                </label>
+                                <div class="desc" ar="الدماغ والجهاز العصبي">Brain & nervous system</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="bodySystem" value="chest">
+                                    <span ar="الصدر">Chest</span>
+                                </label>
+                                <div class="desc" ar="الرئتين والقلب والمنصف">Lungs, heart & mediastinum</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="bodySystem" value="msk">
+                                    <span ar="عضلي هيكلي">MSK</span>
+                                </label>
+                                <div class="desc" ar="العظام والمفاصل والعضلات">Bones, joints & muscles</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="bodySystem" value="abdominal">
+                                    <span ar="البطن">Abdominal</span>
+                                </label>
+                                <div class="desc" ar="أعضاء البطن والحوض">Abdominal & pelvic organs</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="bodySystem" value="spine">
+                                    <span ar="العمود الفقري">Spine</span>
+                                </label>
+                                <div class="desc" ar="الفقرات والأقراص بينها">Vertebrae & discs</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="bodySystem" value="cardiac">
+                                    <span ar="القلب">Cardiac</span>
+                                </label>
+                                <div class="desc" ar="القلب والأوعية الكبيرة">Heart & great vessels</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="bodySystem" value="vascular">
+                                    <span ar="الأوعية الدموية">Vascular</span>
+                                </label>
+                                <div class="desc" ar="الشرايين والأوردة">Arteries & veins</div>
+                            </div>
+                            <div class="modality-option">
+                                <label>
+                                    <input type="checkbox" name="bodySystem" value="pediatric">
+                                    <span ar="الأطفال">Pediatric</span>
+                                </label>
+                                <div class="desc" ar="تصوير الأطفال والمواليد">Children & newborns</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Experience -->
+                    <div class="form-group">
+                        <label for="experience" ar="سنوات الخبرة">Years of Experience</label>
+                        <input type="number" id="experience" min="0" max="50" value="0">
+                    </div>
+                </div>
+                
+                <div id="errorMsg" class="error-message"></div>
+                
+                <button type="submit" class="btn btn-primary btn-block btn-lg" ar="إنشاء حساب">
+                    Sign Up
+                </button>
+            </form>
+            
+            <p class="auth-switch">
+                <span ar="لديك حساب بالفعل؟">Already have an account?</span>
+                <a href="index.html" ar="تسجيل الدخول">Sign In</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/theme.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+  
+            // Role change - show/hide radiologist preferences
+            document.getElementById('role').addEventListener('change', function() {
+                const isRad = this.value === 'radiologist';
+                document.getElementById('radiologistPrefs').style.display = isRad ? 'block' : 'none';
+                if (isRad) updatePracticeType();
+            });
+            
+            // Practice type change
+            document.getElementById('practiceType').addEventListener('change', updatePracticeType);
+        });
+        
+        function updatePracticeType() {
+            const type = document.getElementById('practiceType').value;
+            const dentalDiv = document.getElementById('dentalModalities');
+            const medicalModDiv = document.getElementById('medicalModalities');
+            const medicalSystems = document.getElementById('medicalBodySystems');
+            
+            if (type === 'dental') {
+                dentalDiv.style.display = 'block';
+                medicalModDiv.style.display = 'none';
+                medicalSystems.style.display = 'none';
+                
+                // Default: check all dental, uncheck all medical
+                dentalDiv.querySelectorAll('input[name="modality"]').forEach(cb => cb.checked = true);
+                medicalModDiv.querySelectorAll('input[name="modality"]').forEach(cb => cb.checked = false);
+                medicalSystems.querySelectorAll('input[name="bodySystem"]').forEach(cb => cb.checked = false);
+            } else {
+                dentalDiv.style.display = 'none';
+                medicalModDiv.style.display = 'block';
+                medicalSystems.style.display = 'block';
+                
+                // Uncheck dental, medical stays as user selects
+                dentalDiv.querySelectorAll('input[name="modality"]').forEach(cb => cb.checked = false);
+            }
+        }
+        
+// In signup.html - Form submit handler
+document.getElementById('signupForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorMsg = document.getElementById('errorMsg');
+    errorMsg.classList.remove('show');
+    
+    const fullName = document.getElementById('fullName').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const role = document.getElementById('role').value;
+    
+    let userData = {
+        full_name: fullName,
+        role: role
+    };
+    
+    if (role === 'radiologist') {
+        const practiceType = document.getElementById('practiceType').value;
+        
+        // Get checked modalities from visible section only
+        let modalityCheckboxes;
+        if (practiceType === 'dental') {
+            modalityCheckboxes = document.querySelectorAll('#dentalModalities input[name="modality"]:checked');
+        } else {
+            modalityCheckboxes = document.querySelectorAll('#medicalModalities input[name="modality"]:checked');
+        }
+        const modalities = Array.from(modalityCheckboxes).map(cb => cb.value);
+        
+        // Get body systems (medical only)
+        let bodySystems = [];
+        if (practiceType === 'medical') {
+            const systemCheckboxes = document.querySelectorAll('#medicalBodySystems input[name="bodySystem"]:checked');
+            bodySystems = Array.from(systemCheckboxes).map(cb => cb.value);
+        }
+        
+        const experience = parseInt(document.getElementById('experience').value) || 0;
+        
+        if (modalities.length === 0) {
+            errorMsg.textContent = 'Please select at least one modality';
+            errorMsg.classList.add('show');
+            return;
+        }
+        
+        // Build preferences JSON
+        userData.preferences = {
+            practice_type: practiceType,
+            modalities: modalities,
+            body_systems: bodySystems,
+            years_experience: experience
+        };
+    }
+    
+    try {
+        await signup(email, password, userData);
+        errorMsg.textContent = 'Account created! Check your email for confirmation.';
+        errorMsg.style.background = 'var(--success-light)';
+        errorMsg.style.color = 'var(--success)';
+        errorMsg.classList.add('show');
+        
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 2000);
+    } catch (error) {
+        errorMsg.textContent = error.message;
+        errorMsg.classList.add('show');
+    }
+});
+    </script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <title ar="رادكونكت - المحفظة">RadConnect - Wallet</title>
+            <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/rtl.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand" ar="رادكونكت">RadConnect</div>
+        <div class="nav-links">
+            <a href="dashboard.html" ar="لوحة التحكم">Dashboard</a>
+            <a href="cases.html" ar="الحالات">Cases</a>
+            <a href="wallet.html" class="active" ar="المحفظة">Wallet</a>
+            <a href="pricing.html" ar="الأسعار">Pricing</a>
+            <a href="profile.html" ar="الملف الشخصي">Profile</a>
+            <a href="admin/index.html" id="adminLink" style="display: none;" ar="الإدارة">Admin</a>
+        </div>
+        <div class="nav-actions">
+            <button onclick="toggleTheme()">🌓</button>
+            <button onclick="toggleLang()">AR</button>
+            <button onclick="logout()" ar="تسجيل الخروج">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h1 ar="المحفظة">Wallet</h1>
+        </div>
+
+        <!-- Balance Card -->
+        <div class="balance-card">
+            <div class="balance-label" id="balanceLabel" ar="الرصيد الحالي">Current Balance</div>
+            <div class="balance-amount" id="balanceAmount">$0.00</div>
+            <div class="balance-label" id="balanceStatus"></div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid-3 mb-3" id="summaryGrid">
+            <div class="stat-card">
+                <h3 id="summaryTitle1" ar="إجمالي الحالات">Total Cases</h3>
+                <div class="stat-value" id="totalCases">0</div>
+            </div>
+            <div class="stat-card">
+                <h3 id="summaryTitle2" ar="إجمالي المستحق">Total Owed/Earned</h3>
+                <div class="stat-value" id="totalOwed">$0.00</div>
+            </div>
+            <div class="stat-card">
+                <h3 id="summaryTitle3" ar="إجمالي المدفوع">Total Paid/Received</h3>
+                <div class="stat-value" id="totalPaid">$0.00</div>
+            </div>
+        </div>
+
+        <!-- Transactions -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title" ar="سجل المعاملات">Transaction History</h2>
+            </div>
+            <div id="transactionsList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p ar="جاري التحميل...">Loading transactions...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+            
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+    
+            if (isAdmin()) {
+                document.getElementById('adminLink').style.display = 'inline';
+            }
+            
+            await loadWallet();
+        });
+        
+        async function loadWallet() {
+            const balance = await getWalletBalance();
+            const transactions = await getTransactions();
+            
+            // Update balance
+            const balanceAmount = document.getElementById('balanceAmount');
+            const balanceStatus = document.getElementById('balanceStatus');
+            
+            balanceAmount.textContent = formatCurrency(Math.abs(balance.net_balance));
+            
+            if (isSP()) {
+                document.getElementById('balanceLabel').textContent = 
+                    balance.net_balance <= 0 ? 'Amount Owed' : 'Credit';
+                balanceStatus.textContent = balance.net_balance < 0 ? 'Outstanding balance to be paid' : 'All paid';
+                document.getElementById('summaryTitle2').textContent = 'Total Owed';
+                document.getElementById('summaryTitle3').textContent = 'Total Paid';
+            } else if (isRad()) {
+                document.getElementById('balanceLabel').textContent = 
+                    balance.net_balance > 0 ? 'Pending Payout' : 'All Received';
+                balanceStatus.textContent = balance.net_balance > 0 ? 'Awaiting payment' : 'All payments received';
+                document.getElementById('summaryTitle2').textContent = 'Total Earned';
+                document.getElementById('summaryTitle3').textContent = 'Total Received';
+            }
+            
+            // Update summary
+            document.getElementById('totalCases').textContent = balance.completed_cases_count || 0;
+            document.getElementById('totalOwed').textContent = formatCurrency(balance.total_owed_or_earned || 0);
+            document.getElementById('totalPaid').textContent = formatCurrency(balance.total_paid_or_received || 0);
+            
+            // Render transactions
+            const container = document.getElementById('transactionsList');
+            
+            if (!transactions || transactions.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p ar="لا توجد معاملات حتى الآن">No transactions yet</p>
+                    </div>`;
+                translatePage();
+                return;
+            }
+            
+            container.innerHTML = transactions.map(t => {
+                const isIncoming = t.to_user_id === currentUser.id;
+                const amountClass = isIncoming ? 'positive' : 'negative';
+                const prefix = isIncoming ? '+' : '-';
+                
+                return `
+                    <div class="transaction-item">
+                        <div>
+                            <strong>${t.cases?.case_number ? `Case #${t.cases.case_number}` : 'Manual Entry'}</strong>
+                            <div class="text-sm text-muted">${t.notes || t.type}</div>
+                            <div class="text-sm text-muted">${formatDate(t.created_at)}</div>
+                        </div>
+                        <div class="transaction-amount ${amountClass}">
+                            ${prefix}${formatCurrency(t.amount)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            translatePage();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <title ar="رادكونكت - الأسعار">RadConnect - Pricing</title>
+            <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/rtl.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand" ar="رادكونكت">RadConnect</div>
+        <div class="nav-links">
+            <a href="dashboard.html" ar="لوحة التحكم">Dashboard</a>
+            <a href="cases.html" ar="الحالات">Cases</a>
+            <a href="wallet.html" ar="المحفظة">Wallet</a>
+            <a href="pricing.html" class="active" ar="الأسعار">Pricing</a>
+            <a href="profile.html" ar="الملف الشخصي">Profile</a>
+            <a href="admin/index.html" id="adminLink" style="display: none;" ar="الإدارة">Admin</a>
+        </div>
+        <div class="nav-actions">
+            <button onclick="toggleTheme()">🌓</button>
+            <button onclick="toggleLang()">AR</button>
+            <button onclick="logout()" ar="تسجيل الخروج">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h1 ar="قائمة الأسعار">Price List</h1>
+            <button id="addPriceBtn" class="btn btn-primary" onclick="showModal('addPriceModal')" style="display: none;" ar="إضافة سعر">
+                + Add Price
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex gap-1 mb-2 flex-wrap">
+            <select id="modalityFilter" class="form-group" style="margin: 0; width: auto;" onchange="filterPricing()">
+                <option value="all" ar="جميع الطرائق">All Modalities</option>
+                <option value="xray">X-Ray</option>
+                <option value="ct">CT</option>
+                <option value="mri">MRI</option>
+                <option value="ultrasound">Ultrasound</option>
+                <option value="mammography">Mammography</option>
+                <option value="nuclear_medicine">Nuclear Medicine</option>
+            </select>
+            <select id="systemFilter" class="form-group" style="margin: 0; width: auto;" onchange="filterPricing()">
+                <option value="all" ar="جميع الأنظمة">All Systems</option>
+                <option value="neuro">Neuro</option>
+                <option value="chest">Chest</option>
+                <option value="msk">MSK</option>
+                <option value="abdominal">Abdominal</option>
+                <option value="spine">Spine</option>
+                <option value="cardiac">Cardiac</option>
+                <option value="vascular">Vascular</option>
+                <option value="pediatric">Pediatric</option>
+            </select>
+        </div>
+
+        <!-- Pricing Grid -->
+        <div class="grid-3" id="pricingGrid">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p ar="جاري التحميل...">Loading pricing...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add/Edit Price Modal -->
+    <div id="addPriceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle" ar="إضافة سعر جديد">Add New Price</h3>
+                <button class="modal-close" onclick="hideModal('addPriceModal')">&times;</button>
+            </div>
+            <form id="priceForm">
+                <input type="hidden" id="priceId">
+                <div class="form-group">
+                    <label for="pModality" ar="الطريقة">Modality</label>
+                    <select id="pModality" required>
+                        <option value="xray">X-Ray</option>
+                        <option value="ct">CT</option>
+                        <option value="mri">MRI</option>
+                        <option value="ultrasound">Ultrasound</option>
+                        <option value="mammography">Mammography</option>
+                        <option value="nuclear_medicine">Nuclear Medicine</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pBodySystem" ar="نظام الجسم">Body System</label>
+                    <select id="pBodySystem" required>
+                        <option value="neuro">Neuro</option>
+                        <option value="chest">Chest</option>
+                        <option value="msk">MSK</option>
+                        <option value="abdominal">Abdominal</option>
+                        <option value="spine">Spine</option>
+                        <option value="cardiac">Cardiac</option>
+                        <option value="vascular">Vascular</option>
+                        <option value="pediatric">Pediatric</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pUrgency" ar="الأولوية">Urgency</label>
+                    <select id="pUrgency" required>
+                        <option value="routine" ar="روتيني">Routine</option>
+                        <option value="stat" ar="عاجل">Stat</option>
+                        <option value="emergency" ar="طارئ">Emergency</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pDescription" ar="الوصف">Description</label>
+                    <input type="text" id="pDescription" required ar-placeholder="مثال: تصوير مقطعي للدماغ">
+                </div>
+                <div class="form-group">
+                    <label for="pPrice" ar="السعر الأساسي (دولار)">Base Price (USD)</label>
+                    <input type="number" id="pPrice" required step="0.01" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="pEta" ar="الوقت المقدر (ساعات)">Estimated ETA (Hours)</label>
+                    <input type="number" id="pEta" required min="1" value="24">
+                </div>
+                <div class="flex gap-1 mt-2">
+                    <button type="submit" class="btn btn-primary" ar="حفظ">Save</button>
+                    <button type="button" class="btn btn-outline" onclick="hideModal('addPriceModal')" ar="إلغاء">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let allPricing = [];
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+            
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+  
+            if (isAdmin()) {
+                document.getElementById('adminLink').style.display = 'inline';
+                document.getElementById('addPriceBtn').style.display = 'inline-flex';
+            }
+            
+            await loadPricing();
+            
+            // Price form submit
+            document.getElementById('priceForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const id = document.getElementById('priceId').value;
+                const data = {
+                    modality: document.getElementById('pModality').value,
+                    body_system: document.getElementById('pBodySystem').value,
+                    urgency: document.getElementById('pUrgency').value,
+                    description: document.getElementById('pDescription').value,
+                    base_price: parseFloat(document.getElementById('pPrice').value),
+                    estimated_eta_hours: parseInt(document.getElementById('pEta').value),
+                };
+                
+                try {
+                    if (id) {
+                        await updatePricing(id, data);
+                        showToast('Price updated!', 'success');
+                    } else {
+                        await savePricing(data);
+                        showToast('Price added!', 'success');
+                    }
+                    hideModal('addPriceModal');
+                    await loadPricing();
+                } catch (error) {
+                    showToast('Error saving price', 'error');
+                }
+            });
+        });
+        
+        async function loadPricing() {
+            allPricing = await getPricing();
+            filterPricing();
+        }
+        
+        function filterPricing() {
+            const modalityFilter = document.getElementById('modalityFilter').value;
+            const systemFilter = document.getElementById('systemFilter').value;
+            
+            let filtered = allPricing;
+            
+            if (modalityFilter !== 'all') {
+                filtered = filtered.filter(p => p.modality === modalityFilter);
+            }
+            if (systemFilter !== 'all') {
+                filtered = filtered.filter(p => p.body_system === systemFilter);
+            }
+            
+            renderPricing(filtered);
+        }
+        
+        function renderPricing(items) {
+            const container = document.getElementById('pricingGrid');
+            
+            if (items.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <p ar="لا توجد أسعار">No pricing found</p>
+                    </div>`;
+                translatePage();
+                return;
+            }
+            
+            container.innerHTML = items.map(p => `
+                <div class="pricing-card">
+                    <div class="flex-between mb-1">
+                        <span class="badge badge-progress">${p.modality}</span>
+                        <span class="badge badge-pending">${p.urgency}</span>
+                    </div>
+                    <h3>${p.description}</h3>
+                    <p class="text-sm text-muted">${p.body_system}</p>
+                    <div class="pricing-price mt-2">${formatCurrency(p.base_price)}</div>
+                    <p class="text-sm text-muted" ar="الوقت المقدر">ETA: ${p.estimated_eta_hours}h</p>
+                    ${isAdmin() ? `
+                        <div class="flex gap-1 mt-2">
+                            <button class="btn btn-sm btn-outline" onclick="editPrice('${p.id}')" ar="تعديل">Edit</button>
+                            <button class="btn btn-sm btn-danger" onclick="deletePriceItem('${p.id}')" ar="حذف">Delete</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('');
+            
+            translatePage();
+        }
+        
+        function editPrice(id) {
+            const item = allPricing.find(p => p.id === id);
+            if (!item) return;
+            
+            document.getElementById('modalTitle').textContent = 'Edit Price';
+            document.getElementById('priceId').value = item.id;
+            document.getElementById('pModality').value = item.modality;
+            document.getElementById('pBodySystem').value = item.body_system;
+            document.getElementById('pUrgency').value = item.urgency;
+            document.getElementById('pDescription').value = item.description;
+            document.getElementById('pPrice').value = item.base_price;
+            document.getElementById('pEta').value = item.estimated_eta_hours;
+            
+            showModal('addPriceModal');
+        }
+        
+        async function deletePriceItem(id) {
+            if (!confirm('Delete this price?')) return;
+            
+            await deletePricing(id);
+            showToast('Price deleted', 'success');
+            await loadPricing();
+        }
+    </script>
+</body>
+</html>

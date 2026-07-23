@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <title ar="رادكونكت - الملف الشخصي">RadConnect - Profile</title>
+            <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/rtl.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand" ar="رادكونكت">RadConnect</div>
+        <div class="nav-links">
+            <a href="dashboard.html" ar="لوحة التحكم">Dashboard</a>
+            <a href="cases.html" ar="الحالات">Cases</a>
+            <a href="wallet.html" ar="المحفظة">Wallet</a>
+            <a href="pricing.html" ar="الأسعار">Pricing</a>
+            <a href="profile.html" class="active" ar="الملف الشخصي">Profile</a>
+            <a href="admin/index.html" id="adminLink" style="display: none;" ar="الإدارة">Admin</a>
+        </div>
+        <div class="nav-actions">
+            <button onclick="toggleTheme()">🌓</button>
+            <button onclick="toggleLang()">AR</button>
+            <button onclick="logout()" ar="تسجيل الخروج">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container" style="max-width: 700px;">
+        <div class="page-header">
+            <h1 ar="الملف الشخصي">Profile Settings</h1>
+        </div>
+
+        <div class="card">
+            <form id="profileForm">
+                <div class="form-group">
+                    <label for="fullName" ar="الاسم الكامل">Full Name</label>
+                    <input type="text" id="fullName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email" ar="البريد الإلكتروني">Email</label>
+                    <input type="email" id="email" disabled>
+                    <small ar="لا يمكن تغيير البريد الإلكتروني">Email cannot be changed</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="roleDisplay" ar="الدور">Role</label>
+                    <input type="text" id="roleDisplay" disabled>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone" ar="رقم الهاتف">Phone</label>
+                    <input type="tel" id="phone" ar-placeholder="أدخل رقم الهاتف">
+                </div>
+
+                <!-- Radiologist Fields -->
+                <div id="radFields" style="display: none;">
+                    <div class="form-group">
+                        <label for="credentials" ar="المؤهلات">Credentials</label>
+                        <input type="text" id="credentials" ar-placeholder="مثال: MD, FRCR">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="license" ar="رقم الترخيص">License Number</label>
+                        <input type="text" id="license">
+                    </div>
+
+                    <h3 ar="التخصصات" style="margin: 1.5rem 0 0.5rem;">Specializations</h3>
+                    
+                    <label ar="الطرائق" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Modalities</label>
+                    <div class="checkbox-grid" id="modalityCheckboxes">
+                        <label><input type="checkbox" name="prefModality" value="xray"> X-Ray</label>
+                        <label><input type="checkbox" name="prefModality" value="ct"> CT</label>
+                        <label><input type="checkbox" name="prefModality" value="mri"> MRI</label>
+                        <label><input type="checkbox" name="prefModality" value="ultrasound"> Ultrasound</label>
+                        <label><input type="checkbox" name="prefModality" value="mammography"> Mammography</label>
+                        <label><input type="checkbox" name="prefModality" value="nuclear_medicine"> Nuclear Medicine</label>
+                    </div>
+
+                    <label ar="أنظمة الجسم" style="font-weight: 600; display: block; margin: 1rem 0 0.5rem;">Body Systems</label>
+                    <div class="checkbox-grid" id="systemCheckboxes">
+                        <label><input type="checkbox" name="prefSystem" value="neuro"> Neuro</label>
+                        <label><input type="checkbox" name="prefSystem" value="chest"> Chest</label>
+                        <label><input type="checkbox" name="prefSystem" value="msk"> MSK</label>
+                        <label><input type="checkbox" name="prefSystem" value="abdominal"> Abdominal</label>
+                        <label><input type="checkbox" name="prefSystem" value="spine"> Spine</label>
+                        <label><input type="checkbox" name="prefSystem" value="cardiac"> Cardiac</label>
+                        <label><input type="checkbox" name="prefSystem" value="vascular"> Vascular</label>
+                        <label><input type="checkbox" name="prefSystem" value="pediatric"> Pediatric</label>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="experience" ar="سنوات الخبرة">Years of Experience</label>
+                        <input type="number" id="experience" min="0" max="50">
+                    </div>
+                </div>
+
+                <!-- Notification Preferences -->
+                <h3 ar="الإشعارات" style="margin: 1.5rem 0 0.5rem;">Notifications</h3>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="pushEnabled" checked>
+                        <span ar="تفعيل الإشعارات">Enable Push Notifications</span>
+                    </label>
+                </div>
+
+                <div id="saveMsg" class="error-message"></div>
+
+                <button type="submit" class="btn btn-primary btn-lg btn-block" ar="حفظ التغييرات">
+                    Save Changes
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+            
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+    
+            if (isAdmin()) {
+                document.getElementById('adminLink').style.display = 'inline';
+            }
+            
+            loadProfile();
+        });
+        
+        function loadProfile() {
+            const p = currentProfile;
+            
+            document.getElementById('fullName').value = p.full_name || '';
+            document.getElementById('email').value = p.email || '';
+            document.getElementById('roleDisplay').value = p.role || '';
+            document.getElementById('phone').value = p.phone || '';
+            
+            // Radiologist fields
+            if (isRad()) {
+                document.getElementById('radFields').style.display = 'block';
+                document.getElementById('credentials').value = p.credentials || '';
+                document.getElementById('license').value = p.license_number || '';
+                document.getElementById('experience').value = p.years_of_experience || 0;
+                
+                // Check preferences
+                const prefs = p.preferences || {};
+                
+                if (prefs.modalities) {
+                    prefs.modalities.forEach(m => {
+                        const cb = document.querySelector(`input[name="prefModality"][value="${m}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                }
+                
+                if (prefs.body_systems) {
+                    prefs.body_systems.forEach(s => {
+                        const cb = document.querySelector(`input[name="prefSystem"][value="${s}"]`);
+                        if (cb) cb.checked = true;
+                    });
+                }
+            }
+            
+            // Notification prefs
+            document.getElementById('pushEnabled').checked = p.push_enabled !== false;
+        }
+        
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const msg = document.getElementById('saveMsg');
+            msg.classList.remove('show');
+            
+            const updates = {
+                full_name: document.getElementById('fullName').value,
+                phone: document.getElementById('phone').value,
+                push_enabled: document.getElementById('pushEnabled').checked,
+            };
+            
+            if (isRad()) {
+                updates.credentials = document.getElementById('credentials').value;
+                updates.license_number = document.getElementById('license').value;
+                updates.years_of_experience = parseInt(document.getElementById('experience').value);
+                
+                const modalities = Array.from(document.querySelectorAll('input[name="prefModality"]:checked')).map(cb => cb.value);
+                const systems = Array.from(document.querySelectorAll('input[name="prefSystem"]:checked')).map(cb => cb.value);
+                
+                updates.preferences = {
+                    modalities,
+                    body_systems: systems,
+                };
+            }
+            
+            try {
+                await updateUser(currentUser.id, updates);
+                
+                // Update local profile
+                currentProfile = { ...currentProfile, ...updates };
+                
+                msg.textContent = 'Profile updated successfully!';
+                msg.style.background = 'var(--success-light)';
+                msg.style.color = 'var(--success)';
+                msg.classList.add('show');
+                
+                showToast('Profile saved!', 'success');
+            } catch (error) {
+                msg.textContent = error.message || 'Error saving profile';
+                msg.classList.add('show');
+            }
+        });
+    </script>
+</body>
+</html>

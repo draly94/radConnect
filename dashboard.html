@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <title ar="رادكونكت - لوحة التحكم">RadConnect - Dashboard</title>
+        <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/rtl.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand" ar="رادكونكت">RadConnect</div>
+        <div class="nav-links">
+            <a href="dashboard.html" class="active" ar="لوحة التحكم">Dashboard</a>
+            <a href="cases.html" ar="الحالات">Cases</a>
+            <a href="wallet.html" ar="المحفظة">Wallet</a>
+            <a href="pricing.html" ar="الأسعار">Pricing</a>
+            <a href="profile.html" ar="الملف الشخصي">Profile</a>
+            <a href="admin/index.html" id="adminLink" style="display: none;" ar="الإدارة">Admin</a>
+        </div>
+        <div class="nav-actions">
+            <button onclick="toggleTheme()">🌓</button>
+            <button onclick="toggleLang()">AR</button>
+            <button onclick="logout()" ar="تسجيل الخروج">Logout</button>
+        </div>
+    </nav>
+
+<main class="container">
+    <div class="page-header">
+        <div>
+            <h1 ar="لوحة التحكم">Dashboard</h1>
+            <span id="welcomeMsg" class="text-muted"></span>
+        </div>
+        <div id="quickActions"></div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid-4 mb-3" id="statsGrid">
+        <div class="stat-card">
+            <h3 ar="الحالات النشطة">Active Cases</h3>
+            <div class="stat-value" id="activeCount">-</div>
+        </div>
+        <div class="stat-card">
+            <h3 ar="قيد المراجعة">Pending Review</h3>
+            <div class="stat-value" id="pendingCount">-</div>
+        </div>
+        <div class="stat-card">
+            <h3 ar="مكتملة">Completed</h3>
+            <div class="stat-value" id="completedCount">-</div>
+        </div>
+        <div class="stat-card">
+            <h3 ar="رصيد المحفظة">Balance</h3>
+            <div class="stat-value" id="balanceAmount">-</div>
+        </div>
+    </div>
+
+    <!-- Recent Cases -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title" ar="الحالات الحديثة">Recent Cases</h2>
+            <a href="cases.html" class="btn btn-outline btn-sm" ar="عرض الكل">View All</a>
+        </div>
+        <div id="recentCases">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p ar="جاري التحميل...">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Cases (Radiologist only) -->
+    <div id="availableCasesSection" class="card mt-2" style="display: none;">
+        <div class="card-header">
+            <h2 class="card-title" ar="حالات متاحة">Available Cases</h2>
+        </div>
+        <div id="availableCases">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+</main>
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const user = await checkAuth();
+        if (!user) return;
+        
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+        
+        // Admin link
+        if (isAdmin()) {
+            document.getElementById('adminLink').style.display = 'inline';
+        }
+        
+        // Welcome message
+        document.getElementById('welcomeMsg').textContent = `Welcome, ${currentProfile.full_name}`;
+        
+        // Quick actions based on role
+        const quickActions = document.getElementById('quickActions');
+        
+        if (isSP()) {
+            quickActions.innerHTML = `
+                <a href="new-case.html" class="btn btn-primary btn-lg">
+                    + <span ar="حالة جديدة">New Case</span>
+                </a>
+            `;
+        } else if (isRad()) {
+            quickActions.innerHTML = `
+                <a href="cases.html" class="btn btn-primary">
+                    <span ar="الحالات المتاحة">Available Cases</span>
+                </a>
+            `;
+        } else if (isAdmin()) {
+            quickActions.innerHTML = `
+                <a href="admin/index.html" class="btn btn-primary">
+                    <span ar="لوحة الإدارة">Admin Panel</span>
+                </a>
+            `;
+        }
+        
+        // Load stats
+        const stats = await getDashboardStats();
+        document.getElementById('activeCount').textContent = stats.activeCount;
+        document.getElementById('pendingCount').textContent = stats.pendingCount;
+        document.getElementById('completedCount').textContent = stats.completedCount;
+        document.getElementById('balanceAmount').textContent = formatCurrency(stats.balance);
+        
+        // Load recent cases
+        const cases = await getCases();
+        const recentCasesDiv = document.getElementById('recentCases');
+        
+        if (cases.length === 0) {
+            recentCasesDiv.innerHTML = `
+                <div class="empty-state">
+                    <p ar="لا توجد حالات حتى الآن">No cases yet</p>
+                    ${isSP() ? `
+                        <a href="new-case.html" class="btn btn-primary mt-2">
+                            <span ar="إنشاء أول حالة">Create Your First Case</span>
+                        </a>
+                    ` : ''}
+                </div>`;
+        } else {
+            recentCasesDiv.innerHTML = cases.slice(0, 5).map(c => `
+                <div class="case-card" onclick="window.location.href='case-detail.html?id=${c.id}'">
+                    <div class="case-card-header">
+                        <span class="case-number">Case #${c.case_number}</span>
+                        <span class="badge badge-${getStatusBadge(c.status)}">${formatStatus(c.status)}</span>
+                    </div>
+                    <div class="case-details">
+                        <div><span class="case-label" ar="الطريقة">Modality:</span> ${c.modality?.join(', ') || '-'}</div>
+                        <div><span class="case-label" ar="النظام">System:</span> ${c.body_system?.join(', ') || '-'}</div>
+                        <div><span class="case-label" ar="التاريخ">Date:</span> ${formatDate(c.created_at)}</div>
+                        ${c.price ? `<div><span class="case-label" ar="السعر">Price:</span> ${formatCurrency(c.price)}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Available cases for radiologists
+        if (isRad()) {
+            const availableCases = await getAvailableCases();
+            const section = document.getElementById('availableCasesSection');
+            const container = document.getElementById('availableCases');
+            
+            if (availableCases.length > 0) {
+                section.style.display = 'block';
+                container.innerHTML = availableCases.map(c => `
+                    <div class="case-card" onclick="window.location.href='case-detail.html?id=${c.id}'">
+                        <div class="case-card-header">
+                            <span class="case-number">Case #${c.case_number}</span>
+                            <span class="badge badge-pending" ar="متاح">Available</span>
+                        </div>
+                        <div class="case-details">
+                            <div><span class="case-label" ar="الطريقة">Modality:</span> ${c.modality?.join(', ')}</div>
+                            <div><span class="case-label" ar="النظام">System:</span> ${c.body_system?.join(', ')}</div>
+                            <div><span class="case-label" ar="السعر">Price:</span> ${formatCurrency(c.price)}</div>
+                            ${c.deadline ? `<div><span class="case-label" ar="الموعد">Deadline:</span> ${formatDate(c.deadline)}</div>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        translatePage();
+    });
+    
+    function getStatusBadge(status) {
+        if (status.includes('pending') || status === 'awaiting_radiologist') return 'pending';
+        if (status === 'in_progress' || status === 'assigned') return 'progress';
+        if (status === 'completed' || status === 'resolved_closed') return 'completed';
+        if (status.includes('reject') || status === 'disputed') return 'rejected';
+        return 'pending';
+    }
+</script>
+</body>
+</html>

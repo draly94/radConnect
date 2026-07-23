@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <title ar="رادكونكت - الحالات">RadConnect - Cases</title>
+            <script>
+        (function() {
+            // Load theme
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.querySelector('meta[name="theme-color"]').content = '#1a1a2e';
+            }
+            
+            // Load language
+            const lang = localStorage.getItem('lang') || 'en';
+            document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+            document.documentElement.lang = lang;
+            
+            // Store current lang for the toggle button text
+            window.__initialLang = lang;
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/rtl.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand" ar="رادكونكت">RadConnect</div>
+        <div class="nav-links">
+            <a href="dashboard.html" ar="لوحة التحكم">Dashboard</a>
+            <a href="cases.html" class="active" ar="الحالات">Cases</a>
+            <a href="wallet.html" ar="المحفظة">Wallet</a>
+            <a href="pricing.html" ar="الأسعار">Pricing</a>
+            <a href="profile.html" ar="الملف الشخصي">Profile</a>
+            <a href="admin/index.html" id="adminLink" style="display: none;" ar="الإدارة">Admin</a>
+        </div>
+        <div class="nav-actions">
+            <button onclick="toggleTheme()">🌓</button>
+            <button onclick="toggleLang()">AR</button>
+            <button onclick="logout()" ar="تسجيل الخروج">Logout</button>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="page-header">
+            <h1 ar="الحالات">Cases</h1>
+            <div class="flex gap-1">
+                <select id="statusFilter" class="form-group" style="margin: 0; width: auto;" onchange="loadCases()">
+                    <option value="all" ar="جميع الحالات">All Cases</option>
+                    <option value="pending_admin_review" ar="قيد المراجعة الإدارية">Pending Admin Review</option>
+                    <option value="awaiting_radiologist" ar="بانتظار الطبيب">Awaiting Radiologist</option>
+                    <option value="assigned" ar="مخصصة">Assigned</option>
+                    <option value="in_progress" ar="قيد العمل">In Progress</option>
+                    <option value="pending_admin_review_rad_work" ar="مراجعة التقرير">Pending Report Review</option>
+                    <option value="revision_requested" ar="مراجعة مطلوبة">Revision Requested</option>
+                    <option value="pending_sp_review" ar="بانتظار مراجعتك">Pending Your Review</option>
+                    <option value="completed" ar="مكتملة">Completed</option>
+                    <option value="disputed" ar="متنازع عليها">Disputed</option>
+                    <option value="rejected_by_admin" ar="مرفوضة">Rejected</option>
+                </select>
+                <button id="newCaseBtn" class="btn btn-primary" onclick="window.location.href='new-case.html'" style="display: none;" ar="حالة جديدة">
+                    + New Case
+                </button>
+            </div>
+        </div>
+
+        <div id="casesList">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p ar="جاري التحميل...">Loading cases...</p>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (!user) return;
+            
+        translatePage();
+        loadLang();
+        document.body.classList.add('translated');
+  
+            if (isAdmin()) {
+                document.getElementById('adminLink').style.display = 'inline';
+            }
+            
+            if (isSP()) {
+                document.getElementById('newCaseBtn').style.display = 'inline-flex';
+            }
+            
+            await loadCases();
+        });
+        
+        async function loadCases() {
+            const status = document.getElementById('statusFilter').value;
+            const cases = await getCases(status === 'all' ? null : status);
+            const container = document.getElementById('casesList');
+            
+            if (cases.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p ar="لا توجد حالات">No cases found</p>
+                        ${isSP() ? `<button class="btn btn-primary mt-2" onclick="window.location.href='new-case.html'" ar="إنشاء حالة جديدة">Create New Case</button>` : ''}
+                    </div>`;
+                translatePage();
+                return;
+            }
+            
+            container.innerHTML = cases.map(c => {
+                const otherParty = isSP() 
+                    ? (c.assigned_radiologist_id ? `Radiologist #${c.assigned_radiologist_id.slice(0,4)}` : 'Unassigned')
+                    : isRad()
+                    ? `Provider #${c.provider_id.slice(0,4)}`
+                    : `SP: ${c.provider_id?.slice(0,4)} | Rad: ${c.assigned_radiologist_id?.slice(0,4) || 'Unassigned'}`;
+                
+                return `
+                    <div class="case-card" onclick="window.location.href='case-detail.html?id=${c.id}'">
+                        <div class="case-card-header">
+                            <div>
+                                <span class="case-number">Case #${c.case_number}</span>
+                                <span class="text-sm text-muted" style="margin-left: 0.75rem;">${otherParty}</span>
+                            </div>
+                            <span class="badge badge-${getStatusBadge(c.status)}">${formatStatus(c.status)}</span>
+                        </div>
+                        <div class="case-details">
+                            <div><span class="case-label" ar="الطريقة">Modality:</span> ${c.modality?.join(', ') || '-'}</div>
+                            <div><span class="case-label" ar="النظام">System:</span> ${c.body_system?.join(', ') || '-'}</div>
+                            <div><span class="case-label" ar="الأولوية">Urgency:</span> ${c.urgency}</div>
+                            <div><span class="case-label" ar="التاريخ">Date:</span> ${formatDate(c.created_at)}</div>
+                            ${c.price ? `<div><span class="case-label" ar="السعر">Price:</span> ${formatCurrency(c.price)}</div>` : ''}
+                            ${c.deadline ? `<div><span class="case-label" ar="الموعد">Deadline:</span> ${formatDate(c.deadline)}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            translatePage();
+        }
+        
+        function getStatusBadge(status) {
+            if (status.includes('pending') || status === 'awaiting_radiologist') return 'pending';
+            if (status === 'in_progress' || status === 'assigned') return 'progress';
+            if (status === 'completed' || status === 'resolved_closed') return 'completed';
+            if (status.includes('reject') || status === 'disputed') return 'rejected';
+            return 'pending';
+        }
+    </script>
+</body>
+</html>
