@@ -1,29 +1,31 @@
 // service-worker.js - RadConnect PWA
 const CACHE_NAME = 'radconnect-v2';
+
+// 1. Fixed: Changed all absolute paths to relative paths
 const ASSETS_TO_CACHE = [
-    '/',
-    '/index.html',
-    '/signup.html',
-    '/dashboard.html',
-    '/cases.html',
-    '/case-detail.html',
-    '/new-case.html',
-    '/wallet.html',
-    '/pricing.html',
-    '/profile.html',
-    '/admin/index.html',
-    '/admin/review-case.html',
-    '/admin/users.html',
-    '/admin/settings.html',
-    '/css/main.css',
-    '/css/rtl.css',
-    '/js/config.js',
-    '/js/auth.js',
-    '/js/utils.js',
-    '/js/theme.js',
-    '/js/api.js',
-    '/js/notifications.js',
-    '/manifest.json'
+    './',
+    'index.html',
+    'signup.html',
+    'dashboard.html',
+    'cases.html',
+    'case-detail.html',
+    'new-case.html',
+    'wallet.html',
+    'pricing.html',
+    'profile.html',
+    'admin/index.html',
+    'admin/review-case.html',
+    'admin/users.html',
+    'admin/settings.html',
+    'css/main.css',
+    'css/rtl.css',
+    'js/config.js',
+    'js/auth.js',
+    'js/utils.js',
+    'js/theme.js',
+    'js/api.js',
+    'js/notifications.js',
+    'manifest.json'
 ];
 
 // Install event - cache all assets
@@ -61,15 +63,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         caches.match(event.request)
             .then(cachedResponse => {
-                // Return cached response if found
                 if (cachedResponse) {
                     return cachedResponse;
                 }
                 
-                // Otherwise fetch from network
                 return fetch(event.request)
                     .then(response => {
-                        // Cache successful responses
                         if (response.ok && response.type === 'basic') {
                             const responseClone = response.clone();
                             caches.open(CACHE_NAME)
@@ -78,9 +77,9 @@ self.addEventListener('fetch', (event) => {
                         return response;
                     })
                     .catch(() => {
-                        // Offline fallback
+                        // 2. Fixed: Relative path for offline fallback
                         if (event.request.mode === 'navigate') {
-                            return caches.match('/offline.html');
+                            return caches.match('offline.html');
                         }
                     });
             })
@@ -89,7 +88,8 @@ self.addEventListener('fetch', (event) => {
 
 // Push notification event
 self.addEventListener('push', (event) => {
-    let data = { title: 'RadConnect', body: 'New notification', icon: '/assets/icons/icon-192.png' };
+    // 3. Fixed: Relative paths for notification icons
+    let data = { title: 'RadConnect', body: 'New notification', icon: 'assets/icons/icon-192.png' };
     
     if (event.data) {
         try {
@@ -101,21 +101,15 @@ self.addEventListener('push', (event) => {
     
     const options = {
         body: data.body,
-        icon: data.icon || '/assets/icons/icon-192.png',
-        badge: '/assets/icons/badge.png',
+        icon: data.icon || 'assets/icons/icon-192.png',
+        badge: 'assets/icons/badge.png',
         tag: data.tag || 'default',
         data: data.data || {},
         vibrate: [200, 100, 200],
         requireInteraction: true,
         actions: [
-            {
-                action: 'view',
-                title: 'View'
-            },
-            {
-                action: 'dismiss',
-                title: 'Dismiss'
-            }
+            { action: 'view', title: 'View' },
+            { action: 'dismiss', title: 'Dismiss' }
         ]
     };
     
@@ -134,28 +128,26 @@ self.addEventListener('notificationclick', (event) => {
         return;
     }
     
-    // Default: open case detail if caseId exists
-    let url = '/dashboard.html';
+    // 4. Fixed: Relative URLs for notifications
+    let url = 'dashboard.html';
     if (data && data.caseId) {
-        url = `/case-detail.html?id=${data.caseId}`;
+        url = `case-detail.html?id=${data.caseId}`;
     }
     
     event.waitUntil(
         clients.matchAll({ type: 'window' })
             .then(windowClients => {
-                // If window exists, focus it and navigate
                 for (const client of windowClients) {
                     if (client.url.includes(self.location.origin)) {
                         return client.navigate(url).then(() => client.focus());
                     }
                 }
-                // Otherwise open new window
                 return clients.openWindow(url);
             })
     );
 });
 
-// Periodic sync for file cleanup check (if supported)
+// Periodic sync
 self.addEventListener('periodicsync', (event) => {
     if (event.tag === 'check-file-retention') {
         event.waitUntil(checkFileRetention());
@@ -163,9 +155,8 @@ self.addEventListener('periodicsync', (event) => {
 });
 
 async function checkFileRetention() {
-    // This would call an API endpoint to check and clean expired files
     try {
-        const response = await fetch('/api/cleanup-expired-files', { method: 'POST' });
+        const response = await fetch('api/cleanup-expired-files', { method: 'POST' });
         return response.ok;
     } catch (error) {
         console.error('File cleanup check failed:', error);
