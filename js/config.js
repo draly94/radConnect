@@ -14,6 +14,6 @@ const CONFIG = {
     STORAGE_BUCKET_RAD: 'radiologist-files',
     
     // Pages
-    LOGIN_PAGE: '/index.html',
-    DASHBOARD_PAGE: '/dashboard.html',
+    LOGIN_PAGE: 'index.html',
+    DASHBOARD_PAGE: 'dashboard.html',
 };
